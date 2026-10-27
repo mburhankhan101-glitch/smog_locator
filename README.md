@@ -80,40 +80,42 @@ passes. `fires.py` takes them from two sensors:
 
 | Sensor | Pixel | Passes (local time) | Source |
 |---|---|---|---|
-| VIIRS (Suomi NPP, NOAA-20, NOAA-21) | 375 m | about 13:30 and 01:30 | NASA FIRMS, public 7-day files |
+| VIIRS (Suomi NPP, NOAA-20, NOAA-21) | 375 m | about 13:30 and 01:30 | NASA FIRMS |
 | Sentinel-3 SLSTR fire product | 1 km | about 10:00 and 22:00 | Microsoft Planetary Computer |
 
 A burned field from step 1 burned somewhere between its last clear Sentinel-2 look and the day it
 showed char. It counts as **caught** when a fire point fell within one fire pixel (375 m for VIIRS,
 1 km for Sentinel-3) of it inside that window. Only fields whose whole window lies inside a sensor's
-data are compared: for VIIRS that is fields burned between 21 and 26 October, because the public files
-only reach back 7 days. Points in a 400 m cell that was hot on 3 or more days (brick kilns, which leave
-no scar) are left out; there were only 3.
+data are compared. Points in a 400 m cell that was hot on 3 or more days (brick kilns, which leave no
+scar) are left out: 20 points in 8 cells.
 
 | Sensor | Burned area compared | Caught by a fire point | **Missed** |
 |---|---|---|---|
-| VIIRS, burned | 2,194 ha (21-26 Oct) | 349 ha | **84%** |
-| VIIRS, possibly burned | 1,775 ha | 86 ha | 95% |
+| VIIRS, burned | 4,058 ha (1-26 Oct) | 728 ha | **82%** |
+| VIIRS, possibly burned | 7,782 ha | 423 ha | 95% |
 | Sentinel-3, burned | 1,991 ha (1-25 Oct) | 20 ha | 99% |
 
 ([table](runs/fires_2026-10-01_2026-10-27.csv), [every fire point](runs/fires_2026-10-01_2026-10-27_points.csv))
 
-- **VIIRS missed about five-sixths of the burned area.** This holds when the matching distance is
-  loosened: within 750 m it still misses 74%, within 1.5 km (four VIIRS pixels) 55%.
-- **The fire points it does have are real**: 335 of the 405 VIIRS points between the first and last
-  Sentinel-2 look (83%) sit on a field that burned in the same window, and 66 of the other 70 have a
+- **VIIRS missed about four-fifths of the burned area.** This holds when the matching distance is
+  loosened (within 750 m it still misses 72%, within 1.5 km, four VIIRS pixels, 54%) and on every big
+  burning day: 76% missed for fields seen burned on 18 October, 81% on 21 October, 85% on 26 October.
+- **The fire points it does have are real**: 732 of the 913 VIIRS points between the first and last
+  Sentinel-2 look (80%) sit on a field that burned in the same window, and 173 of the other 181 have a
   burned field within 375 m, burned at another time (a neighbour, or a scar Sentinel-2 dated
   differently). Fire points are reliable; they just see a small part of the burning.
-- **Fire points only exist at pass times.** 529 of the 537 VIIRS points are from the early afternoon
-  pass and 8 from the night pass. Sentinel-3 found only 4 in 76 passes over the whole month: its morning
-  and late-evening passes come when few fields burn, and a 1 km pixel needs a big fire to stand out.
-  Burning in the late afternoon, between the passes, leaves no fire point at all, but it leaves a scar.
+- **Fire points only exist at pass times.** 1,043 of the 1,060 VIIRS points are from the early
+  afternoon pass and 17 from the night pass. Sentinel-3 found only 4 in 76 passes over the whole month:
+  its morning and late-evening passes come when few fields burn, and a 1 km pixel needs a big fire to
+  stand out. Burning in the late afternoon, between the passes, leaves no fire point at all, but it
+  leaves a scar.
 
 ![Fire points against burn scars](runs/fires_2026-10-01_2026-10-27.png)
 
-Every run keeps the VIIRS 7-day files it downloads (in `cache/firms/`), so the record grows as the
-season goes on. With a free FIRMS MAP_KEY in the environment variable `FIRMS_MAP_KEY`, `fires.py` also
-fetches the archive from 1 October (not tested yet).
+VIIRS comes from the FIRMS archive, which needs a free MAP_KEY
+([request one](https://firms.modaps.eosdis.nasa.gov/api/map_key/)) in the environment variable
+`FIRMS_MAP_KEY`. Without a key, `fires.py` uses only the public files of the last 7 days; every
+download is kept in `cache/firms/`, so running it weekly still builds up the season.
 
 ## Roadmap
 

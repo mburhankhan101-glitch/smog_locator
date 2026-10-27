@@ -77,8 +77,9 @@ def viirs():
     f = pd.concat([pd.read_csv(p, dtype={"acq_time": str}) for p in glob.glob(os.path.join(folder, "*.csv"))])
     f = f[(f.longitude > w) & (f.longitude < e) & (f.latitude > s) & (f.latitude < n)]
     f = f[f.confidence.astype(str).str.lower().str[0] != "l"]          # drop low confidence
+    f["acq_time"] = f.acq_time.str.zfill(4)                             # the archive writes 0737 as 737
     f = f.drop_duplicates(["latitude", "longitude", "acq_date", "acq_time", "satellite"])
-    t = pd.to_datetime(f.acq_date + " " + f.acq_time.str.zfill(4), format="%Y-%m-%d %H%M", utc=True)
+    t = pd.to_datetime(f.acq_date + " " + f.acq_time, format="%Y-%m-%d %H%M", utc=True)
     return pd.DataFrame({"sensor": "VIIRS", "satellite": f.satellite.astype(str).values, "time": t.values,
                          "lat": f.latitude.values, "lon": f.longitude.values, "frp": f.frp.values})
 
@@ -261,6 +262,7 @@ def figure(days, burned_on, possible_on, f, table, hits, compared, out, zoom_km=
         ax[1].text(k, r.flagged_ha_compared, f"{r.missed_share:.0%}\nmissed", ha="center", va="bottom", fontsize=9)
     ax[1].set_xticks(x, labels, fontsize=8)
     ax[1].set_ylabel("flagged area compared (ha)")
+    ax[1].set_ylim(0, table.flagged_ha_compared.max() * 1.12)
     ax[1].legend(fontsize=8, loc="upper left")
     ax[1].set_title("How much of the burned area did fire points catch?\n(only fields burned while the sensor's data covers)",
                     fontsize=10)
@@ -292,7 +294,7 @@ def figure(days, burned_on, possible_on, f, table, hits, compared, out, zoom_km=
             ax[3].add_patch(plt.Circle(((col - c0) * burn_data.RES / 1000, zoom_km - (row - r0) * burn_data.RES / 1000),
                                        RADIUS[sensor] / 1000, fill=False, edgecolor=colour, lw=1))
     ax[3].set_xlim(0, zoom_km); ax[3].set_ylim(0, zoom_km)
-    ax[3].set_title(f"Zoom {zoom_km} x {zoom_km} km (cyan box), {days[-1]}: fields burned 21-26 Oct\n"
+    ax[3].set_title(f"Zoom {zoom_km} x {zoom_km} km (cyan box), {days[-1]}\n"
                     "white: burned, orange: burned and caught by a VIIRS fire point (circle)", fontsize=10)
     ax[4].axis("off")
     ax[4].text(0, 0.95, "How to read this\n\n"
