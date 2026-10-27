@@ -8,3 +8,5 @@ pyproj
 pystac-client
 planetary-computer
 requests
+xarray
+h5netcdf
