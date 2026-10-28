@@ -10,3 +10,4 @@ planetary-computer
 requests
 xarray
 h5netcdf
+scikit-learn

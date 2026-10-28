@@ -1,0 +1,9 @@
+where,area_ha,burned_ha,possibly_burned_ha,viirs_compared_ha,viirs_caught_ha,viirs_missed_share
+rice,183926.08,3182.2,4309.08,3141.16,635.76,0.798
+"cropland, not rice",132663.48,641.76,2522.52,635.32,80.76,0.873
+not cropland: trees,24105.16,65.36,337.4,,,
+not cropland: shrubs,1326.84,19.72,19.28,,,
+not cropland: grass,16213.08,46.0,221.36,,,
+not cropland: built-up,23782.64,131.4,353.56,,,
+not cropland: bare,6733.04,47.0,70.6,,,
+not cropland: water,1849.52,12.76,3.2,,,

@@ -16,6 +16,7 @@ and Muridke (73.58-74.22 E, 31.35-31.89 N).
 python burn_data.py 2026-10-01 2026-10-27      # Sentinel-2 for every day with a pass, 20 m, into cache/
 python burns.py 2026-10-01 2026-10-27          # burned fields, per day, and a figure, into runs/
 python fires.py 2026-10-01 2026-10-27          # satellite fire points against the burned fields
+python rice.py                                 # rice fields from Sentinel-1 radar, and the burns on them
 ```
 
 ## Step 1: burn scars
@@ -117,18 +118,60 @@ VIIRS comes from the FIRMS archive, which needs a free MAP_KEY
 `FIRMS_MAP_KEY`. Without a key, `fires.py` uses only the public files of the last 7 days; every
 download is kept in `cache/firms/`, so running it weekly still builds up the season.
 
+## Step 3: which burns are on rice
+
+Step 1 flags anything that turned dark; step 3 asks where rice actually grew this season, from
+Sentinel-1 radar, which sees through the monsoon clouds that hide July and August from Sentinel-2.
+
+Rice is transplanted into **flooded** paddies. Standing water is a mirror to radar: the pulse
+bounces away and VH backscatter is very low. As the rice grows, the pulse bounces between the stems
+and the water and comes back, and VH rises by 6-7 dB. Sugarcane, orchards and fodder are never
+flooded; villages stay bright.
+
+`rice.py` takes 11 Sentinel-1 dates (one orbit, so the same viewing angle every time, 23 June to
+16 October), keeps cropland from ESA WorldCover, and groups the pixels' radar curves into 6 groups
+(k-means). A group is rice when its average curve dropped to -19.5 dB or below between mid June and
+mid August and then rose by at least 4 dB. Cut-offs on single pixels did not work: neither the
+lowest VH nor the rise splits into two clear humps, while the group curves are clean.
+
+| Group | Share of cropland | Burned in October | Share of the group burned | Greenness (NDVI) on 26 Oct |
+|---|---|---|---|---|
+| Rice, flooded ~30 June | 20% | 2,023 ha | **3.2%** | 0.27 |
+| Rice, flooded ~12 July | 19% | 889 ha | 1.5% | 0.29 |
+| Rice, flooded ~24 July (weaker flood) | 15% | 177 ha | 0.4% | 0.40 |
+| Rice, flooded ~24 July | 5% | 93 ha | 0.6% | 0.46 |
+| Not flooded, darker | 24% | 499 ha | 0.7% | 0.35 |
+| Not flooded, bright (sugarcane, orchards) | 18% | 143 ha | 0.3% | 0.49 |
+
+([groups](runs/rice_2026_groups.csv), [where the burns lie](runs/rice_2026_burns.csv))
+
+- **Rice: 184,000 ha, 58% of the cropland** in the area.
+- **77% of the burned area is on rice**, and rice burns at 1.7% of its area against 0.5% for other
+  cropland, 3.6 times as often. Only 8% of the burned area (322 ha) lies outside cropland, 131 ha of
+  it on WorldCover "built-up" (village edges, yards, or a 2021 map that is out of date).
+- **"Possibly burned" is much less tied to rice**: 55% of it, close to the 58% of cropland that rice
+  covers. Much of that class is probably not burning, as step 2 also suggested.
+- **Fields planted first were harvested and burned first.** Rice flooded at the end of June holds
+  half of all October's burned area (2,023 of 4,146 ha); the late-July rice is still partly green on 26 October (NDVI 0.40-0.46
+  against 0.27) and has mostly not been burned yet. Greenness comes from Sentinel-2, independent of the
+  radar, and agrees with the groups.
+- **On rice alone, VIIRS fire points still missed 80%** of the burned area (3,141 ha compared), and
+  87% on other cropland. Step 2's result is not an artefact of false scars outside rice.
+
+![Rice fields and the burns on them](runs/rice_2026.png)
+
 ## Roadmap
 
 - [x] Step 1: burn scars from Sentinel-2 (NBR, MIRBI), October 2026 so far
 - [x] Step 2: satellite fire points (Sentinel-3 fire product, VIIRS); how much do fire counts miss?
-- [ ] Step 3: rice fields only, so other dark changes are not mistaken for burns
+- [x] Step 3: rice fields from Sentinel-1 radar; which burns are on rice
 - [ ] Step 4: the whole season, October to December 2026, per district, against 2025
 - [ ] Step 5: smoke and wind: on which days did burning upwind line up with bad air in Lahore?
 - [ ] Step 6: a field check in the rice belt; README, poster, v1.0
 
 ## Data and credits
 
-Sentinel-2 L2A and the Sentinel-3 SLSTR fire product from
+Sentinel-2 L2A, Sentinel-1 RTC, ESA WorldCover 2021 and the Sentinel-3 SLSTR fire product from
 [Microsoft Planetary Computer](https://planetarycomputer.microsoft.com/). Contains modified Copernicus
 Sentinel data (2026). VIIRS active fire data from [NASA FIRMS](https://firms.modaps.eosdis.nasa.gov/)
 (LANCE near real time).

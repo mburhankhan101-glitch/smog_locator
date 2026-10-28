@@ -1,0 +1,7 @@
+group,rice,darkest,lowest_db,rise_db,share_of_cropland,area_ha,burned_ha,possibly_burned_ha,burned_share_of_group,ndvi_2026-10-26
+"rice, flooded ~30 Jun",True,2026-06-30,-21.3,6.3,0.203,64111.2,2023.44,2201.6,0.032,0.267
+"rice, flooded ~12 Jul",True,2026-07-12,-21.2,7.0,0.186,58784.76,888.52,1148.72,0.015,0.294
+"rice, flooded ~24 Jul, weaker",True,2026-07-24,-19.8,5.9,0.147,46481.92,176.92,759.92,0.004,0.404
+"rice, flooded ~24 Jul",True,2026-07-24,-22.9,7.1,0.046,14548.2,93.32,198.84,0.006,0.463
+"not flooded, bright",False,2026-06-30,-15.1,0.9,0.178,56359.16,142.92,1036.68,0.003,0.493
+"not flooded, dark",False,2026-06-30,-17.6,2.4,0.241,76304.32,498.84,1485.84,0.007,0.346
