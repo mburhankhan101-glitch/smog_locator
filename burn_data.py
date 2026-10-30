@@ -6,7 +6,9 @@ in UTM zone 43N, corners on whole kilometres. 20 m is the pixel of the shortwave
 burn indices need; the 10 m bands are averaged to it.
 
 Bands kept: blue, green, red (for true colour), narrow NIR (B8A, 20 m), SWIR-1 (B11) and SWIR-2 (B12),
-plus a valid-pixel mask from the scene classification (SCL). Valid: vegetation, bare soil, water,
+plus a valid-pixel mask from the scene classification (SCL). A scene whose bands are not reflectance
+is skipped: on 28 October 2026 every scene on Planetary Computer held values of 1-253 instead of
+reflectance x 10000, under a normal scene classification, and showed as 146,000 ha "burned". Valid: vegetation, bare soil, water,
 unclassified and also "dark area" pixels (class 2), because fresh char is exactly that; not valid: no
 data, saturated, cloud shadow, clouds and thin cirrus. Since processing baseline 04.00 (2022) L2A
 values carry an offset of +1000, removed here.
@@ -49,11 +51,17 @@ def catalog():
     return pystac_client.Client.open(STAC, modifier=planetary_computer.sign_inplace)
 
 
-def pass_days(start, end):
-    """{day: [items]} for every day with a Sentinel-2 pass over the area."""
+def pass_days(start, end, chunk=31):
+    """{day: [items]} for every day with a Sentinel-2 pass over the area, searched a month at a time
+    (long searches time out)."""
     days = defaultdict(list)
-    for i in catalog().search(collections=["sentinel-2-l2a"], bbox=LONLAT, datetime=f"{start}/{end}").items():
-        days[str(i.datetime.date())].append(i)
+    a, last = Date.fromisoformat(start), Date.fromisoformat(end)
+    while a <= last:
+        b = min(Date.fromordinal(a.toordinal() + chunk - 1), last)
+        for i in catalog().search(collections=["sentinel-2-l2a"], bbox=LONLAT, datetime=f"{a}/{b}T23:59:59Z",
+                                  method="GET", limit=100).items():
+            days[str(i.datetime.date())].append(i)
+        a = Date.fromordinal(b.toordinal() + 1)
     return dict(sorted(days.items()))
 
 
@@ -71,8 +79,10 @@ def _read(href, tr, shape, resampling):
     return dst
 
 
-def day(d, items=None):
-    """(6, H, W) uint16 reflectance x 10000 and the valid mask for one day, cached in cache/."""
+def day(d, items=None, cache=True, bands=BANDS):
+    """(6, H, W) uint16 reflectance x 10000 and the valid mask for one day, cached in cache/ (about
+    90 MB a day; a whole season is read with cache=False, and a day already cached is still used).
+    Only `bands` are read; the others stay 0 (detection needs neither blue nor red)."""
     path = os.path.join(CACHE, f"s2_{d}.npz")
     if os.path.exists(path):
         z = np.load(path)
@@ -90,14 +100,19 @@ def day(d, items=None):
         if not take.any():
             continue
         offset = 1000 if item.properties.get("s2:processing_baseline", "00.00") >= "04.00" else 0
-        for k, band in enumerate(BANDS):
-            res = Resampling.average if band in ("B02", "B03", "B04") else Resampling.nearest
-            v = _read(item.assets[band].href, tr, shape, res)
-            refl[k][take] = np.clip(v[take] - offset, 1, 60000).astype("uint16")
+        v = {k: _read(item.assets[band].href, tr, shape,
+                      Resampling.average if band in ("B02", "B03", "B04") else Resampling.nearest)[take]
+             for k, band in enumerate(BANDS) if band in bands}
+        if np.median(v[BANDS.index("B8A")]) < offset + 100:     # NIR under 0.01 over land: not reflectance
+            print(f"{item.id}: band values are not reflectance, scene skipped", flush=True)
+            continue
+        for k in v:
+            refl[k][take] = np.clip(v[k] - offset, 1, 60000).astype("uint16")
         scl[take] = s[take]
     valid = np.isin(scl, VALID_SCL)
-    os.makedirs(CACHE, exist_ok=True)
-    np.savez_compressed(path, refl=refl, valid=valid)
+    if cache:
+        os.makedirs(CACHE, exist_ok=True)
+        np.savez_compressed(path, refl=refl, valid=valid)
     return refl, valid
 
 

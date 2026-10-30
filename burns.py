@@ -51,41 +51,45 @@ def indices(refl):
     return nbr, nir, 10 * swir2 - 9.8 * swir1 + 2, water
 
 
-def detect(days, dnbr_min=DNBR_MIN, nbr_max=NBR_MAX, nir_max=NIR_MAX, max_gap=MAX_GAP):
-    """burned_on / possible_on: index of the day each pixel was first flagged (-1: never);
-    since: the last clear look before it; and a table per day."""
-    from scipy import ndimage
+def start():
+    """The state detection carries from day to day: each pixel's last clear look, and what was flagged.
+    burned_on / possible_on: index of the day each pixel was first flagged (-1: never); since: the
+    index of the last clear look before that."""
     tr, shape = burn_data.grid()
-    last_nbr = np.full(shape, np.nan, dtype="float32")
-    last_mirbi = np.full(shape, np.nan, dtype="float32")
-    last_water = np.zeros(shape, dtype=bool)
-    possible_on = np.full(shape, -1, dtype="int16")
-    last_day = np.full(shape, -1, dtype="int32")
-    burned_on = np.full(shape, -1, dtype="int16")      # index of the day it was first seen burned
-    since = np.full(shape, -1, dtype="int16")          # index of the last clear look before that
-    rows = []
-    day_index = {d: k for k, d in enumerate(days)}
-    ordinal = {d: Date.fromisoformat(d).toordinal() for d in days}
-    for d in days:
-        refl, valid = burn_data.day(d)
-        nbr, nir, mirbi, water = indices(refl)
-        k = day_index[d]
-        gap = ordinal[d] - np.where(last_day >= 0, np.array([ordinal[x] for x in days])[np.maximum(last_day, 0)], 0)
-        seen = valid & (last_day >= 0) & (gap <= max_gap)
-        wet = ndimage.binary_dilation((water & valid) | last_water, iterations=2)
-        drop = seen & ~wet & (last_nbr - nbr >= dnbr_min) & (nbr <= nbr_max) & (burned_on < 0) & (possible_on < 0)
-        new = drop & (nir <= nir_max)
-        maybe = drop & (nir > nir_max) & (nir <= NIR_POSSIBLE) & (mirbi - last_mirbi >= DMIRBI_MIN)
-        burned_on[new] = k
-        possible_on[maybe] = k
-        since[new | maybe] = last_day[new | maybe]
-        rows.append({"day": d, "valid_share": float(valid.mean()), "compared_share": float(seen.mean()),
-                     "newly_burned_ha": float(new.sum() * HA), "newly_possibly_burned_ha": float(maybe.sum() * HA)})
-        last_nbr[valid] = nbr[valid]
-        last_mirbi[valid] = mirbi[valid]
-        last_water[valid] = water[valid]
-        last_day[valid] = k
-    return burned_on, possible_on, since, pd.DataFrame(rows)
+    return {"last_nbr": np.full(shape, np.nan, dtype="float32"), "last_mirbi": np.full(shape, np.nan, dtype="float32"),
+            "last_water": np.zeros(shape, dtype=bool), "last_day": np.full(shape, -1, dtype="int32"),
+            "burned_on": np.full(shape, -1, dtype="int16"), "possible_on": np.full(shape, -1, dtype="int16"),
+            "since": np.full(shape, -1, dtype="int16")}
+
+
+def step(s, days, k, refl, valid, dnbr_min=DNBR_MIN, nbr_max=NBR_MAX, nir_max=NIR_MAX, max_gap=MAX_GAP):
+    """Compare day days[k] with each pixel's last clear look, update the state s, return the day's row."""
+    from scipy import ndimage
+    nbr, nir, mirbi, water = indices(refl)
+    ordinal = np.array([Date.fromisoformat(d).toordinal() for d in days])
+    gap = ordinal[k] - np.where(s["last_day"] >= 0, ordinal[np.maximum(s["last_day"], 0)], 0)
+    seen = valid & (s["last_day"] >= 0) & (gap <= max_gap)
+    wet = ndimage.binary_dilation((water & valid) | s["last_water"], iterations=2)
+    drop = (seen & ~wet & (s["last_nbr"] - nbr >= dnbr_min) & (nbr <= nbr_max)
+            & (s["burned_on"] < 0) & (s["possible_on"] < 0))
+    new = drop & (nir <= nir_max)
+    maybe = drop & (nir > nir_max) & (nir <= NIR_POSSIBLE) & (mirbi - s["last_mirbi"] >= DMIRBI_MIN)
+    s["burned_on"][new] = k
+    s["possible_on"][maybe] = k
+    s["since"][new | maybe] = s["last_day"][new | maybe]
+    s["last_nbr"][valid] = nbr[valid]
+    s["last_mirbi"][valid] = mirbi[valid]
+    s["last_water"][valid] = water[valid]
+    s["last_day"][valid] = k
+    return {"day": days[k], "valid_share": float(valid.mean()), "compared_share": float(seen.mean()),
+            "newly_burned_ha": float(new.sum() * HA), "newly_possibly_burned_ha": float(maybe.sum() * HA)}
+
+
+def detect(days):
+    """burned_on, possible_on, since (see start) and a table per day."""
+    s = start()
+    rows = [step(s, days, k, *burn_data.day(d)) for k, d in enumerate(days)]
+    return s["burned_on"], s["possible_on"], s["since"], pd.DataFrame(rows)
 
 
 def false_colour(refl):

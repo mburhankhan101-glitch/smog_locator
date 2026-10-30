@@ -1,0 +1,4 @@
+season,up_to,sentinel2_days,mean_compared_share,burned_ha,burned_on_cropland_ha,share_of_cropland_burned,rice_ha_common_area,share_of_rice_burned_common_area
+2025,10-28,13,0.7634,3996.04,3813.56,0.012,106235.88,0.0122
+2025,12-30,41,0.7181,11686.68,11255.04,0.0356,106235.88,0.0457
+2026,10-28,13,0.5861,4146.32,3823.96,0.0121,111059.64,0.0159

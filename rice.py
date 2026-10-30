@@ -11,14 +11,19 @@ Sentinel-1 RTC (gamma0, terrain corrected) from one orbit only (ORBIT, ascending
 local), so every date sees the fields from the same angle: 11 dates from late June to mid October.
 VH is averaged to the 20 m grid of step 1 and over 3 x 3 pixels (60 m) in linear power, against
 speckle. On cropland (ESA WorldCover 2021, class 40) the 11-date VH curves are grouped by k-means
-(K groups, fitted on a random sample). A group is rice when its average curve was flooded (lowest VH
-from mid June to mid August at or below FLOOD_DB) and then rose by at least RISE_DB. Rules on
+(K groups, fitted on a random sample). A group is rice when its average curve was darkest between
+mid June and mid August (the flood) and then rose by at least RISE_DB. A fixed flood level (say
+-19.5 dB) was tried and dropped: in 2025 every group sits 0.3-0.8 dB higher than in 2026, and two
+groups with rice curves (rises of 5.5 and 6 dB, 80% of their area rice in 2026) fell just short of
+it, while the rise splits rice from the rest in both years (5.5-7.1 dB against 0.9-3.0). Rules on
 pixels did not work: neither the lowest VH nor the rise splits into two clear humps, so any
 pixel cut-off is arbitrary, while the group curves are clean.
 
     python rice.py                 # writes runs/rice_2026.npz, rice_2026_groups.csv, rice_2026_burns.csv, .png
+    python rice.py --year 2025     # another year's rice map only (runs/rice_2025.npz, rice_2025_groups.csv)
 """
 import os
+import sys
 from datetime import date as Date
 
 import matplotlib
@@ -34,22 +39,22 @@ import burns
 import fires
 
 ORBIT = 100
-SEASON = ("2026-06-01", "2026-10-28")
-FLOOD_WINDOW = ("2026-06-15", "2026-08-15")
-FLOOD_DB, RISE_DB = -19.5, 4.0
+SEASON = ("06-01", "10-20")                 # month-day, in the year mapped (before the harvest)
+FLOOD_WINDOW = ("06-15", "08-15")
+RISE_DB = 4.0
 K = 6
 CROPLAND = 40
 WORLDCOVER = {10: "trees", 20: "shrubs", 30: "grass", 40: "cropland", 50: "built-up", 60: "bare",
               80: "water", 90: "wetland"}
 BURNS = os.path.join(burns.OUT, "burns_2026-10-01_2026-10-27")
 FIRES = os.path.join(burns.OUT, "fires_2026-10-01_2026-10-27_points.csv")
-OUT = os.path.join(burns.OUT, "rice_2026")
+OUT = os.path.join(burns.OUT, "rice_{}")
 
 
-def s1_days():
+def s1_days(year):
     """{day: item} for orbit ORBIT over the season, searched a month at a time (long searches time out)."""
     days = {}
-    start, end = Date.fromisoformat(SEASON[0]), Date.fromisoformat(SEASON[1])
+    start, end = Date.fromisoformat(f"{year}-{SEASON[0]}"), Date.fromisoformat(f"{year}-{SEASON[1]}")
     for m in range(start.month, end.month + 1):
         a = max(start, Date(start.year, m, 1))
         b = min(end, Date.fromordinal(Date(start.year, m + 1, 1).toordinal() - 1))
@@ -110,12 +115,11 @@ def groups(days, vh, lc):
     sample = np.random.default_rng(0).choice(len(x), min(200_000, len(x)), replace=False)
     km = KMeans(K, n_init=4, random_state=0).fit(x[sample])
     centres = km.cluster_centers_
-    t = np.array([Date.fromisoformat(d) for d in days])
-    fw = (t >= Date.fromisoformat(FLOOD_WINDOW[0])) & (t <= Date.fromisoformat(FLOOD_WINDOW[1]))
+    fw = np.array([FLOOD_WINDOW[0] <= d[5:] <= FLOOD_WINDOW[1] for d in days])
     lowest = np.where(fw, centres, np.inf).argmin(1)
     low = centres[np.arange(K), lowest]
     rise = np.array([centres[k, lowest[k]:].max() - low[k] for k in range(K)])
-    rice = (low <= FLOOD_DB) & (rise >= RISE_DB)
+    rice = rise >= RISE_DB
     order = sorted(range(K), key=lambda k: (not rice[k], lowest[k] if rice[k] else -centres[k].mean()))
     new = np.empty(K, dtype=int)
     new[order] = np.arange(K)
@@ -132,6 +136,12 @@ def name(row):
     return "not flooded, dark" if row.lowest_db < -16 else "not flooded, bright"
 
 
+def names(info):
+    """Group names, numbered where two groups would share one."""
+    out = [name(row) for row in info.itertuples()]
+    return [f"{n} ({out[:k].count(n) + 1})" if out.count(n) > 1 else n for k, n in enumerate(out)]
+
+
 def missed(points, burned_on, since, days, mask):
     """VIIRS: burned area (inside mask) compared, caught, and the share missed (as in fires.py)."""
     g = points[(points.sensor == "VIIRS") & ~points.persistent].reset_index(drop=True)
@@ -142,8 +152,8 @@ def missed(points, burned_on, since, days, mask):
     return inside.sum() * burns.HA, (hit & inside).sum() * burns.HA, 1 - (hit & inside).sum() / max(inside.sum(), 1)
 
 
-def main():
-    days = s1_days()
+def main(year=2026):
+    days = s1_days(year)
     for d, item in days.items():
         s1_day(d, item)
     days = list(days)
@@ -151,6 +161,16 @@ def main():
     lc = worldcover()
     group, centres, info = groups(days, vh, lc)
     rice = np.isin(group, np.flatnonzero(info.rice))
+    out = OUT.format(year)
+    if year != 2026:                           # the burn tables below are step 3's, for 2026
+        info.insert(0, "group", names(info))
+        info["share_of_cropland"] = [(group == k).sum() / (group >= 0).sum() for k in range(K)]
+        info["area_ha"] = [(group == k).sum() * burns.HA for k in range(K)]
+        np.savez_compressed(out + ".npz", group=group, rice=rice, days=np.array(days), centres=centres)
+        info.round(3).to_csv(out + "_groups.csv", index=False)
+        print(info.round(2).to_string(index=False))
+        print(f"rice {year}: {rice.sum() * burns.HA:,.0f} ha ({rice.sum() / (group >= 0).sum():.0%} of cropland)")
+        return
     z = np.load(BURNS + ".npz")
     burned_on, possible_on, since, s2_days = z["burned_on"], z["possible_on"], z["since"], list(z["days"])
     burned, possible = burned_on >= 0, possible_on >= 0
@@ -159,7 +179,7 @@ def main():
     with np.errstate(invalid="ignore", divide="ignore"):
         ndvi = (r[3] - r[2]) / (r[3] + r[2])
     # per group: area, burns, and greenness on the last Sentinel-2 day (an independent check)
-    info.insert(0, "group", [name(row) for row in info.itertuples()])
+    info.insert(0, "group", names(info))
     info["share_of_cropland"] = [(group == k).sum() / (group >= 0).sum() for k in range(K)]
     info["area_ha"] = [(group == k).sum() * burns.HA for k in range(K)]
     info["burned_ha"] = [(burned & (group == k)).sum() * burns.HA for k in range(K)]
@@ -180,10 +200,10 @@ def main():
         rows.append(row)
     table = pd.DataFrame(rows)
     table = table[table.burned_ha + table.possibly_burned_ha >= 1]
-    np.savez_compressed(OUT + ".npz", group=group, rice=rice, days=np.array(days), centres=centres)
-    info.round(3).to_csv(OUT + "_groups.csv", index=False)
-    table.round(3).to_csv(OUT + "_burns.csv", index=False)
-    figure(days, centres, info, group, lc, burned, possible, table, refl, OUT + ".png")
+    np.savez_compressed(out + ".npz", group=group, rice=rice, days=np.array(days), centres=centres)
+    info.round(3).to_csv(out + "_groups.csv", index=False)
+    table.round(3).to_csv(out + "_burns.csv", index=False)
+    figure(days, centres, info, group, lc, burned, possible, table, refl, out + ".png")
     print(info.round(2).to_string(index=False))
     print(table.round(2).to_string(index=False))
     print(f"rice: {rice.sum() * burns.HA:,.0f} ha ({rice.sum() / (group >= 0).sum():.0%} of cropland); "
@@ -205,8 +225,6 @@ def figure(days, centres, info, group, lc, burned, possible, table, refl, out, z
     for k, row in enumerate(info.itertuples()):
         ax[0].plot(t, centres[k], color=palette[k], lw=2.5 if row.rice else 1.5, ls="-" if row.rice else "--",
                    marker="o", ms=3, label=f"{row.group} ({row.share_of_cropland:.0%})")
-    ax[0].axhline(FLOOD_DB, color="grey", lw=0.8, ls=":")
-    ax[0].text(t[0], FLOOD_DB - 0.4, f"flooded: {FLOOD_DB} dB", fontsize=8, color="grey", va="top")
     ax[0].set_ylabel("VH backscatter (dB)")
     ax[0].legend(fontsize=8, loc="lower right")
     ax[0].tick_params(axis="x", labelrotation=45, labelsize=8)
@@ -269,4 +287,4 @@ def figure(days, centres, info, group, lc, burned, possible, table, refl, out, z
 
 
 if __name__ == "__main__":
-    main()
+    main(int(sys.argv[sys.argv.index("--year") + 1]) if "--year" in sys.argv else 2026)
