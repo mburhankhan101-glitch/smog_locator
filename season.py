@@ -44,6 +44,7 @@ def load(year):
 
 def save(year, s, rows, days):
     path = STATE.format(year)
+    os.makedirs(burn_data.CACHE, exist_ok=True)
     np.savez_compressed(path + ".tmp.npz", rows=json.dumps(rows), days=np.array(days), **s)
     os.replace(path + ".tmp.npz", path)
 

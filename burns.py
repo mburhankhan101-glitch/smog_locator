@@ -38,7 +38,7 @@ import burn_data
 
 DNBR_MIN, NBR_MAX, NIR_MAX, NIR_POSSIBLE, DMIRBI_MIN, MAX_GAP = 0.20, 0.0, 0.15, 0.25, 0.4, 16
 HA = (burn_data.RES ** 2) / 10_000
-OUT = "runs"
+OUT = burn_data.OUT
 
 
 def indices(refl):

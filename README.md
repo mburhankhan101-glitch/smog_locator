@@ -10,7 +10,8 @@ burned field stays black for days, whenever it burned. It is built step by step,
 season of 2026 as it happens.
 
 Study area: about 60 x 60 km of the rice belt north-west of Lahore, over Sheikhupura, Nankana Sahib
-and Muridke (73.58-74.22 E, 31.35-31.89 N).
+and Muridke (73.58-74.22 E, 31.35-31.89 N). From step 5 on, the whole of Sheikhupura and Nankana
+Sahib districts (about 5,800 km²).
 
 ```powershell
 python burn_data.py 2026-10-01 2026-10-27      # Sentinel-2 for every day with a pass, 20 m, into cache/
@@ -21,6 +22,18 @@ python rice.py --year 2025                     # last year's rice map
 python season.py run 2025                      # the whole 2025 season, day by day (resumable)
 python season.py run 2026                      # the 2026 season so far; run again as it goes on
 python season.py report                        # both seasons on the same dates, by tehsil
+```
+
+Step 5 works on the two districts; set `SMOG_AREA=districts` first (`$env:SMOG_AREA = "districts"` in
+PowerShell), which keeps its data in `cache/districts/` and its results in `runs/districts/`:
+
+```powershell
+python season.py run 2025                      # both seasons again, on the bigger area
+python season.py run 2026
+python smoke.py 2025-10-01 2025-12-31          # Sentinel-5P smoke over each district, once a day
+python smoke.py 2026-10-01 2026-12-31
+python districts.py fires                      # VIIRS fire points for both seasons (needs FIRMS_MAP_KEY)
+python districts.py report                     # district table, daily and weekly series, smoke
 ```
 
 ## Step 1: burn scars
@@ -92,25 +105,25 @@ A burned field from step 1 burned somewhere between its last clear Sentinel-2 lo
 showed char. It counts as **caught** when a fire point fell within one fire pixel (375 m for VIIRS,
 1 km for Sentinel-3) of it inside that window. Only fields whose whole window lies inside a sensor's
 data are compared. Points in a 400 m cell that was hot on 3 or more days (brick kilns, which leave no
-scar) are left out: 20 points in 8 cells.
+scar) are left out: 23 points in 7 cells.
 
 | Sensor | Burned area compared | Caught by a fire point | **Missed** |
 |---|---|---|---|
-| VIIRS, burned | 4,058 ha (1-26 Oct) | 728 ha | **82%** |
+| VIIRS, burned | 4,058 ha (1-26 Oct) | 727 ha | **82%** |
 | VIIRS, possibly burned | 7,782 ha | 423 ha | 95% |
-| Sentinel-3, burned | 1,991 ha (1-25 Oct) | 20 ha | 99% |
+| Sentinel-3, burned | 4,146 ha (1-26 Oct) | 20 ha | over 99% |
 
 ([table](runs/fires_2026-10-01_2026-10-27.csv), [every fire point](runs/fires_2026-10-01_2026-10-27_points.csv))
 
 - **VIIRS missed about four-fifths of the burned area.** This holds when the matching distance is
   loosened (within 750 m it still misses 72%, within 1.5 km, four VIIRS pixels, 54%) and on every big
   burning day: 76% missed for fields seen burned on 18 October, 81% on 21 October, 85% on 26 October.
-- **The fire points it does have are real**: 732 of the 913 VIIRS points between the first and last
+- **The fire points it does have are real**: 730 of the 911 VIIRS points between the first and last
   Sentinel-2 look (80%) sit on a field that burned in the same window, and 173 of the other 181 have a
   burned field within 375 m, burned at another time (a neighbour, or a scar Sentinel-2 dated
   differently). Fire points are reliable; they just see a small part of the burning.
-- **Fire points only exist at pass times.** 1,043 of the 1,060 VIIRS points are from the early
-  afternoon pass and 17 from the night pass. Sentinel-3 found only 4 in 76 passes over the whole month:
+- **Fire points only exist at pass times.** 1,043 of the 1,061 VIIRS points are from the early
+  afternoon pass and 18 from the night pass. Sentinel-3 found only 4 in 76 passes over the whole month:
   its morning and late-evening passes come when few fields burn, and a 1 km pixel needs a big fire to
   stand out. Burning in the late afternoon, between the passes, leaves no fire point at all, but it
   leaves a scar.
@@ -121,6 +134,10 @@ VIIRS comes from the FIRMS archive, which needs a free MAP_KEY
 ([request one](https://firms.modaps.eosdis.nasa.gov/api/map_key/)) in the environment variable
 `FIRMS_MAP_KEY`. Without a key, `fires.py` uses only the public files of the last 7 days; every
 download is kept in `cache/firms/`, so running it weekly still builds up the season.
+
+(The numbers above were recounted in step 5. The first version also picked up a few fire points from
+after 27 October out of a newer 7-day file; `fires.py` now keeps only the dates asked for. The
+result did not change: VIIRS still missed 82%.)
 
 ## Step 3: which burns are on rice
 
@@ -226,19 +243,129 @@ WorldCover 2021), which does not depend on the radar.
 
 Tehsil boundaries: [geoBoundaries](https://www.geoboundaries.org/) (Pakistan, ADM3), in `data/`.
 
+## Step 5: district by district, and the smoke
+
+Steps 1-4 worked on a 60 km box, which cuts across districts. Step 5 covers **the whole of
+Sheikhupura and Nankana Sahib districts** and asks three questions for each: how many fire points
+VIIRS picked up, how much farmland the burn scars show, and how much of that burned farmland the
+fire points missed. Then: does the smoke over a district rise and fall with its burning?
+
+- **Districts** are built from geoBoundaries tehsils (`data/districts.geojson`): Sheikhupura =
+  Sheikhupura, Ferozewala, Muridke, Safdarabad and Sharak Pur; Nankana Sahib = Nankana Sahab, Shah Kot
+  and Shangla Hill. The geoBoundaries district file still shows Sheikhupura from before 2005, with
+  Nankana Sahib inside it, so it is not used.
+- **Farmland** is ESA WorldCover cropland: 297,778 ha in Sheikhupura and 176,994 ha in Nankana Sahib.
+- **Burn scars** come from step 4's season run on the bigger grid (6,000 x 6,850 pixels at 20 m): 41
+  Sentinel-2 days for 2025, 14 for 2026 up to 31 October.
+- **Fire points** come from the FIRMS archive: the final (standard) processing for 2025 and near real
+  time for 2026. Persistent hot spots are left out, as in step 2.
+- **Burning per day**: a scar is only known to have burned between two Sentinel-2 looks, so each
+  burned pixel is spread evenly over the afternoons in its window. Sums over a week are close; single
+  days are an estimate.
+
+| Farmland burned (burn scars) | 2025, 1-31 Oct | 2026, 1-31 Oct | 2025, whole season |
+|---|---|---|---|
+| Sheikhupura | 3,897 ha (1.3%) | 3,207 ha (1.1%) | 8,783 ha (3.0%) |
+| Nankana Sahib | 2,288 ha (1.3%) | **3,415 ha (1.9%)** | 6,353 ha (3.6%) |
+| **Both districts** | **6,184 ha (1.3%)** | **6,622 ha (1.4%)** | **15,137 ha (3.2%)** |
+| VIIRS fire points, both districts | 2,258 | 2,244 | 4,340 |
+| Burned farmland with a fire point on it | 1,841 of 6,372 ha | 1,806 of 6,914 ha | 4,044 of 15,655 ha |
+| **Missed by VIIRS** | **71%** (Sheikhupura 72%, Nankana Sahib 70%) | **74%** (76%, 72%) | **74%** (79%, 68%) |
+
+([districts](runs/districts/districts.csv), [per day](runs/districts/districts_daily.csv),
+[per week](runs/districts/districts_weekly.csv))
+
+- **Fire points saw about a quarter of the burned farmland**, in both districts and both years (68-79%
+  missed). Step 2's result from the box (82%) holds over the two whole districts.
+- **October 2026 burned about as much as October 2025** (+7%), but the burning moved: Nankana Sahib
+  burned half as much again (+49%), Sheikhupura 18% less.
+- **Most of 2026 is still to come.** By 31 October 2025 only 41% of that season's burned farmland had
+  been seen; by 15 November, 90%.
+- **"Possibly burned" doubled in 2026** (13,346 ha against 6,605), much of it on 21 October. That
+  class is uncertain (step 2: fire points missed 95% of it, step 3: barely tied to rice), and haze
+  may play a part, so it is not read as more burning.
+- **December 2025 is uncertain**: from mid December about 200 ha a week was flagged on days when fog
+  hid 54-88% of the area. Some is probably real (late fields, sugarcane trash), some may be fog edges.
+
+![Burn scars and fire points in the two districts](runs/districts/districts_map.png)
+
+![Farmland burned and what fire points caught, October 2025 and 2026](runs/districts/districts_bars.png)
+
+### Smoke
+
+**Aerosol optical depth from Sentinel-3 was tried first and dropped** (`aod.py`). It had a value on
+only 46 of 88 days in 2025 and 3 of 28 in October 2026, and the hazy scenes are exactly the ones its
+retrieval flags as invalid or outlier: its monthly median *falls* from October to November 2025 (0.70,
+0.53), when the smog gets worse.
+
+**Sentinel-5P** (`smoke.py`) passes at about 13:30, with VIIRS, and gives a value on most days. Two
+measurements, averaged over each district:
+
+- **UV aerosol index**: particles that absorb ultraviolet light, which smoke does, but so does dust.
+  Values on 86 of 91 days in 2025 and every day of October 2026.
+- **Carbon monoxide (CO) column**: a gas burning gives off. It lasts for weeks, so it builds up over
+  the whole region rather than marking single fires. Values on 70-71 days in 2025 and 28-29 in
+  October 2026.
+
+| Week from (2025) | Farmland burned | Fire points | Aerosol index | CO (mmol/m²) |
+|---|---|---|---|---|
+| 1 Oct | 78 ha | 55 | 0.30 | 36.2 |
+| 8 Oct | 846 ha | 162 | 0.05 | 36.6 |
+| 15 Oct | 1,912 ha | 561 | 0.06 | 39.9 |
+| 22 Oct | 2,375 ha | 954 | 0.59 | 47.5 |
+| **29 Oct** | **4,878 ha** | **1,312** | **0.62** | **49.3** |
+| 5 Nov | 2,662 ha | 1,016 | 0.27 | 38.6 |
+| 12 Nov | 1,052 ha | 196 | 0.54 | 41.1 |
+| 19 Nov | 359 ha | 19 | 0.56 | 45.8 |
+| 26 Nov | 248 ha | 26 | 0.40 | 37.7 |
+| 3-30 Dec, per week | 30-262 ha | 2-26 | -0.33 to 0.29 | 34.5-40.5 |
+
+Spearman correlation of each day's smoke with that day's fire points, per district:
+
+| | 2025 Sheikhupura | 2025 Nankana Sahib | 2026 Sheikhupura | 2026 Nankana Sahib |
+|---|---|---|---|---|
+| CO, day by day | 0.33 | 0.45 | 0.34 | 0.62 |
+| CO, seasonal trend taken out | 0.04 | -0.09 | 0.26 | -0.04 |
+| Aerosol index, day by day | 0.13 | 0.26 | 0.00 | -0.13 |
+| Aerosol index, seasonal trend taken out | -0.25 | -0.20 | -0.08 | -0.24 |
+
+("Seasonal trend taken out": each series minus its 15-day running median, so the question becomes "more
+fire than usual for the time of season, more smoke than usual?". [All correlations, with p-values and
+days](runs/districts/districts_correlation.csv), also against farmland burned and with the smoke a day
+later.)
+
+- **CO follows the season.** In 2025 it rose with the burning and peaked in the same week (49.3 in the
+  week from 29 October, the week with the most burned farmland), and the correlation day by day is
+  clear (0.33-0.62).
+- **Day to day, local fires do not explain the smoke.** With the seasonal build-up taken out, the CO
+  correlation is close to zero in three of the four cases. CO dropped to 38.6 the week after the
+  peak, while 2,662 ha still burned, and rose again to 45.8 in the week from 19 November, when the two
+  districts had only 19 fire points. Which day is smoky is set by something else: wind bringing smoke
+  from elsewhere (burning in Indian Punjab peaks in mid November), or still air and inversions
+  trapping it. Wind is the next thing to check.
+- **The aerosol index is not a smoke signal here.** Its highest week in October 2026 was the first
+  (0.69), when almost nothing burned, which points to dust. With the trend taken out it even leans
+  negative: on thick-haze days VIIRS may see fewer fires through the smoke.
+
+![Burning and smoke through the season](runs/districts/districts_series.png)
+
+![Fire points against CO, day by day](runs/districts/districts_smoke_co.png)
+
 ## Roadmap
 
 - [x] Step 1: burn scars from Sentinel-2 (NBR, MIRBI), October 2026 so far
 - [x] Step 2: satellite fire points (Sentinel-3 fire product, VIIRS); how much do fire counts miss?
 - [x] Step 3: rice fields from Sentinel-1 radar; which burns are on rice
 - [x] Step 4: the whole season against 2025, per tehsil (2026 is updated as the season goes on)
-- [ ] Step 5: smoke and wind: on which days did burning upwind line up with bad air in Lahore?
+- [x] Step 5: the whole of Sheikhupura and Nankana Sahib districts: fire points against burn scars,
+  and smoke from Sentinel-5P (wind is still open)
 - [ ] Step 6: a field check in the rice belt; README, poster, v1.0
 
 ## Data and credits
 
-Sentinel-2 L2A, Sentinel-1 RTC, ESA WorldCover 2021 and the Sentinel-3 SLSTR fire product from
+Sentinel-2 L2A, Sentinel-1 RTC, ESA WorldCover 2021, the Sentinel-3 SLSTR fire product, Sentinel-3
+SYNERGY aerosol and Sentinel-5P (TROPOMI) aerosol index and carbon monoxide from
 [Microsoft Planetary Computer](https://planetarycomputer.microsoft.com/). Contains modified Copernicus
 Sentinel data (2025-2026). VIIRS active fire data from [NASA FIRMS](https://firms.modaps.eosdis.nasa.gov/)
-(LANCE near real time). Tehsil boundaries from [geoBoundaries](https://www.geoboundaries.org/)
-(CC BY 4.0).
+(standard processing and LANCE near real time). Tehsil boundaries from
+[geoBoundaries](https://www.geoboundaries.org/) (CC BY 4.0); the district outlines are built from them.

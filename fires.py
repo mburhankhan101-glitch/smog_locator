@@ -50,23 +50,41 @@ LOCAL = timedelta(hours=5)      # Pakistan time
 PERSISTENT_DAYS, CELL = 3, 400
 
 
-def viirs():
-    """VIIRS fire points over the area: every saved 7-day file, plus the archive with a MAP_KEY."""
-    folder = os.path.join(burn_data.CACHE, "firms")
+def archive_sources(key):
+    """{FIRMS source: (first day, last day)} for the VIIRS archive. Standard processing (_SP) replaces
+    near real time (_NRT) a few months after the fact."""
+    r = requests.get(f"{FIRMS}/api/data_availability/csv/{key}/all", timeout=300)
+    r.raise_for_status()
+    a = pd.read_csv(io.StringIO(r.text))
+    return {row.data_id: (Date.fromisoformat(row.min_date), Date.fromisoformat(row.max_date))
+            for row in a.itertuples() if row.data_id.startswith("VIIRS_")}
+
+
+def viirs(start, end):
+    """VIIRS fire points over the area, start to end (days, UTC): every saved 7-day file (South Asia,
+    kept in cache/firms/ whatever the area), plus the archive with a MAP_KEY, 5 days at a time."""
+    week_folder, folder = os.path.join("cache", "firms"), os.path.join(burn_data.CACHE, "firms")
+    os.makedirs(week_folder, exist_ok=True)
     os.makedirs(folder, exist_ok=True)
     today = str(Date.today())
     for sat, path in VIIRS_7D.items():
-        out = os.path.join(folder, f"{sat}_7d_{today}.csv")
+        out = os.path.join(week_folder, f"{sat}_7d_{today}.csv")
         if not os.path.exists(out):
             r = requests.get(f"{FIRMS}/data/active_fire/{path}", timeout=300)
             r.raise_for_status()
             open(out, "wb").write(r.content)
     key = os.environ.get("FIRMS_MAP_KEY")
     if key:
+        have = archive_sources(key)
         area = ",".join(str(v) for v in burn_data.LONLAT)
-        d = Date(2026, 10, 1)
-        while d < Date.today():
+        d, last = Date.fromisoformat(start), min(Date.fromisoformat(end), Date.today())
+        while d <= last:
             for src in VIIRS_API:
+                sp = src.replace("_NRT", "_SP")
+                if sp in have and have[sp][0] <= d and d + timedelta(days=4) <= have[sp][1]:
+                    src = sp
+                elif src not in have or have[src][1] < d:
+                    continue
                 out = os.path.join(folder, f"{src}_{d}.csv")
                 if not os.path.exists(out):
                     r = requests.get(f"{FIRMS}/api/area/csv/{key}/{src}/{area}/5/{d}", timeout=300)
@@ -74,8 +92,10 @@ def viirs():
                     open(out, "wb").write(r.content)
             d += timedelta(days=5)
     w, s, e, n = burn_data.LONLAT
-    f = pd.concat([pd.read_csv(p, dtype={"acq_time": str}) for p in glob.glob(os.path.join(folder, "*.csv"))])
+    paths = sorted(set(glob.glob(os.path.join(week_folder, "*_7d_*.csv")) + glob.glob(os.path.join(folder, "VIIRS_*.csv"))))
+    f = pd.concat([pd.read_csv(p, dtype={"acq_time": str}) for p in paths])
     f = f[(f.longitude > w) & (f.longitude < e) & (f.latitude > s) & (f.latitude < n)]
+    f = f[(f.acq_date >= start) & (f.acq_date <= end)]
     f = f[f.confidence.astype(str).str.lower().str[0] != "l"]          # drop low confidence
     f["acq_time"] = f.acq_time.str.zfill(4)                             # the archive writes 0737 as 737
     f = f.drop_duplicates(["latitude", "longitude", "acq_date", "acq_time", "satellite"])
@@ -84,16 +104,17 @@ def viirs():
                          "lat": f.latitude.values, "lon": f.longitude.values, "frp": f.frp.values})
 
 
-def s3_items(start, end, chunk=3, tries=4):
-    """Sentinel-3 fire product passes over the area, searched a few days at a time (long searches time out)."""
+def s3_items(start, end, chunk=3, tries=4, collection="sentinel-3-slstr-frp-l2-netcdf", bbox=None):
+    """Sentinel-3 passes over the area (the fire product unless another collection is given), searched
+    a few days at a time (long searches time out)."""
     import pystac_client
     d, last = Date.fromisoformat(start), Date.fromisoformat(end)
     while d <= last:
         e = min(d + timedelta(days=chunk - 1), last)
         for k in range(tries):
             try:
-                items = list(burn_data.catalog().search(collections=["sentinel-3-slstr-frp-l2-netcdf"],
-                                                        bbox=burn_data.LONLAT, datetime=f"{d}/{e}T23:59:59Z",
+                items = list(burn_data.catalog().search(collections=[collection],
+                                                        bbox=bbox or burn_data.LONLAT, datetime=f"{d}/{e}T23:59:59Z",
                                                         method="GET", limit=100).items())
                 break
             except pystac_client.exceptions.APIError:
@@ -187,7 +208,7 @@ def main():
     start, end = sys.argv[1], sys.argv[2]
     z = np.load(os.path.join(burns.OUT, f"burns_{start}_{end}.npz"))
     burned_on, possible_on, since, days = z["burned_on"], z["possible_on"], z["since"], list(z["days"])
-    v = viirs()
+    v = viirs(start, end)
     s3, s3_span = sentinel3(start, end)
     v_time = pd.to_datetime(v.time, utc=True)
     span = {"VIIRS": (v_time.min(), v_time.max()), "S3": s3_span}     # VIIRS: its first and last point
@@ -285,17 +306,23 @@ def figure(days, burned_on, possible_on, f, table, hits, compared, out, zoom_km=
     zz = (slice(r0, r0 + n), slice(c0, c0 + n))
     x0, y0 = c0 * burn_data.RES / 1000, h_km - (r0 + n) * burn_data.RES / 1000
     ax[0].add_patch(plt.Rectangle((x0, y0), zoom_km, zoom_km, fill=False, edgecolor="cyan", lw=1.5))
-    ax[3].imshow(burns.false_colour(last)[zz], extent=(0, zoom_km, 0, zoom_km), interpolation="nearest")
-    ax[3].contour(np.flipud(flagged[zz]), [0.5], colors="white", linewidths=0.6, extent=(0, zoom_km, 0, zoom_km))
-    ax[3].contour(np.flipud(caught[zz]), [0.5], colors="orange", linewidths=1.2, extent=(0, zoom_km, 0, zoom_km))
+    ax[3].imshow(burns.false_colour(last)[zz].mean(-1), cmap="gray", vmin=0, vmax=1, extent=(0, zoom_km, 0, zoom_km),
+                 interpolation="nearest")
+    ax[3].contour(np.flipud(flagged[zz]), [0.5], colors="red", linewidths=1.2, extent=(0, zoom_km, 0, zoom_km))
     for sensor, colour in (("VIIRS", "orange"), ("S3", "deepskyblue")):
         p = f[(f.sensor == sensor) & ~f.persistent & (f.row >= r0) & (f.row < r0 + n) & (f.col >= c0) & (f.col < c0 + n)]
-        for row, col in zip(p.row, p.col):
-            ax[3].add_patch(plt.Circle(((col - c0) * burn_data.RES / 1000, zoom_km - (row - r0) * burn_data.RES / 1000),
-                                       RADIUS[sensor] / 1000, fill=False, edgecolor=colour, lw=1))
+        x, y = (p.col - c0) * burn_data.RES / 1000, zoom_km - (p.row - r0) * burn_data.RES / 1000
+        for xi, yi in zip(x, y):                        # the fire pixel's footprint under the point
+            ax[3].add_patch(plt.Circle((xi, yi), RADIUS[sensor] / 1000, color=colour, alpha=0.25, lw=0))
+        ax[3].scatter(x, y, s=40, c=colour, edgecolors="black", linewidths=0.5, zorder=3)
+    ax[3].legend(handles=[plt.Line2D([], [], color="red", lw=1.5, label="burned field (burn scar)"),
+                          plt.Line2D([], [], color="orange", marker="o", ls="", markeredgecolor="black",
+                                     label="VIIRS fire point, shaded: its 375 m pixel")],
+                 fontsize=9, loc="lower left", framealpha=0.9)
     ax[3].set_xlim(0, zoom_km); ax[3].set_ylim(0, zoom_km)
     ax[3].set_title(f"Zoom {zoom_km} x {zoom_km} km (cyan box), {days[-1]}\n"
-                    "white: burned, orange: burned and caught by a VIIRS fire point (circle)", fontsize=10)
+                    f"{caught[zz].sum() * burns.HA:,.0f} of {flagged[zz].sum() * burns.HA:,.0f} ha burned here had a "
+                    "VIIRS fire point on it", fontsize=10)
     ax[4].axis("off")
     ax[4].text(0, 0.95, "How to read this\n\n"
                "A fire point is a hot spot a satellite saw at the moment it passed:\n"

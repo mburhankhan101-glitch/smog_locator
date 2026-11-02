@@ -13,6 +13,10 @@ unclassified and also "dark area" pixels (class 2), because fresh char is exactl
 data, saturated, cloud shadow, clouds and thin cirrus. Since processing baseline 04.00 (2022) L2A
 values carry an offset of +1000, removed here.
 
+Step 5 covers the whole of Sheikhupura and Nankana Sahib districts, about four times the area: set
+the environment variable SMOG_AREA=districts and every script works on that area, with its own
+cache/districts/ and runs/districts/.
+
     python burn_data.py 2026-10-01 2026-10-27       # download and cache every day with a pass
 """
 import os
@@ -30,11 +34,15 @@ from rasterio.warp import Resampling, reproject, transform_bounds
 from rasterio.windows import Window
 
 CRS = "EPSG:32643"
-LONLAT = (73.58, 31.35, 74.22, 31.89)
+AREAS = {"box": (73.58, 31.35, 74.22, 31.89),           # steps 1-4: 60 x 60 km of the rice belt
+         "districts": (73.28, 31.01, 74.70, 32.07)}     # step 5: all of Sheikhupura and Nankana Sahib districts
+AREA = os.environ.get("SMOG_AREA", "box")
+LONLAT = AREAS[AREA]
 RES = 20
 BANDS = ["B02", "B03", "B04", "B8A", "B11", "B12"]
 VALID_SCL = (2, 4, 5, 6, 7)
-CACHE = "cache"
+CACHE = "cache" if AREA == "box" else os.path.join("cache", AREA)
+OUT = "runs" if AREA == "box" else os.path.join("runs", AREA)
 STAC = "https://planetarycomputer.microsoft.com/api/stac/v1"
 
 
@@ -69,7 +77,8 @@ def _read(href, tr, shape, resampling):
     dst = np.zeros(shape, dtype="float32")
     with rasterio.open(href) as src:
         b = transform_bounds(CRS, src.crs, *rasterio.transform.array_bounds(*shape, tr))
-        win = rasterio.windows.from_bounds(b[0] - 100, b[1] - 100, b[2] + 100, b[3] + 100, src.transform)
+        pad = 100 if src.crs.is_projected else 0.001                    # about 100 m, in metres or degrees
+        win = rasterio.windows.from_bounds(b[0] - pad, b[1] - pad, b[2] + pad, b[3] + pad, src.transform)
         try:
             win = win.intersection(Window(0, 0, src.width, src.height)).round_offsets().round_lengths()
         except rasterio.errors.WindowError:

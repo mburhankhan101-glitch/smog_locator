@@ -1,5 +1,5 @@
 sensor,level,covered,flagged_ha_compared,seen_by_fire_point_ha,missed_share,fire_points,fire_points_with_scar
-VIIRS,burned,01 Oct to 27 Oct,4058.28,727.68,0.821,913,732
-VIIRS,possibly burned,01 Oct to 27 Oct,7782.44,422.76,0.946,913,732
-S3,burned,01 Oct to 25 Oct,1990.96,19.52,0.99,4,4
-S3,possibly burned,01 Oct to 25 Oct,6540.08,17.68,0.997,4,4
+VIIRS,burned,01 Oct to 27 Oct,4058.28,727.44,0.821,911,730
+VIIRS,possibly burned,01 Oct to 27 Oct,7782.44,422.76,0.946,911,730
+S3,burned,01 Oct to 27 Oct,4146.32,19.52,0.995,4,4
+S3,possibly burned,01 Oct to 27 Oct,7837.0,17.68,0.998,4,4
