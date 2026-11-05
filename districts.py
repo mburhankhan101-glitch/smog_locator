@@ -29,7 +29,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from scipy import stats
+from scipy import ndimage, stats
 
 import aod
 import burn_data
@@ -88,14 +88,14 @@ def district_table(ys, latest, district, names, crop):
     rows = []
     areas = [(k, name) for k, name in enumerate(names)] + [(None, "both districts")]
     for y in ys:
-        for up_to in sorted({latest, y["days"][-1][5:]}):
+        for up_to in sorted({latest, y["days"][-1][5:]} | ({"10-31"} if latest > "10-31" else set())):
             k = last_index(y, up_to)
             b = (y["burned_on"] >= 0) & (y["burned_on"] <= k)
             p = (y["possible_on"] >= 0) & (y["possible_on"] <= k)
             f = y["fires"][y["fires"].day.str[5:] <= up_to]
             for d, name in areas:
                 m = district >= 0 if d is None else district == d
-                compared = y["compared"] & b & m
+                compared = y["compared"] & b & m & crop                 # farmland only, as burned_cropland_ha
                 rows.append({"season": y["year"], "up_to": up_to, "district": name,
                              "cropland_ha": (m & crop).sum() * burns.HA,
                              "viirs_fire_points": int((f.district >= 0).sum() if d is None else (f.district == d).sum()),
@@ -107,6 +107,26 @@ def district_table(ys, latest, district, names, crop):
                              "viirs_caught_ha": (y["hit"] & compared).sum() * burns.HA,
                              "viirs_missed_share": 1 - (y["hit"] & compared).sum() / compared.sum()
                                                    if compared.any() else np.nan})
+    return pd.DataFrame(rows)
+
+
+def patches(ys, district, crop, bins=((1, 1), (2, 8), (9, 24), (25, 99), (100, None))):
+    """Burned farmland by the size of its patch (touching burned pixels, diagonals included), and how much
+    of each size VIIRS missed: is the result carried by tiny, uncertain patches?"""
+    rows = []
+    for y in ys:
+        b = (y["burned_on"] >= 0) & (district >= 0) & crop
+        label, _ = ndimage.label(b, structure=np.ones((3, 3)))
+        size = np.bincount(label.ravel())[label]
+        for lo, hi in bins:
+            m = b & (size >= lo) & (size <= (hi or size.max()))
+            compared = m & y["compared"]
+            rows.append({"season": y["year"], "up_to": y["days"][-1][5:],
+                         "patch_pixels": f"{lo}" if lo == hi else f"{lo}+" if hi is None else f"{lo}-{hi}",
+                         "patch_ha": f"{lo * burns.HA:.2f}" + ("+" if hi is None else f"-{hi * burns.HA:.2f}"),
+                         "burned_cropland_ha": m.sum() * burns.HA, "share_of_burned": m.sum() / b.sum(),
+                         "viirs_compared_ha": compared.sum() * burns.HA,
+                         "viirs_missed_share": 1 - (compared & y["hit"]).sum() / max(compared.sum(), 1)})
     return pd.DataFrame(rows)
 
 
@@ -172,17 +192,18 @@ def report():
     latest = min(y["days"][-1][5:] for y in ys)
     table = district_table(ys, latest, district, names, crop)
     per_day = pd.concat([daily(y, district, names, crop, haze) for y in ys], ignore_index=True)
-    corr, per_week = correlations(per_day), weekly(per_day)
+    corr, per_week, sizes = correlations(per_day), weekly(per_day), patches(ys, district, crop)
     os.makedirs(burns.OUT, exist_ok=True)
     out = os.path.join(burns.OUT, "districts")
-    for name, t in (("", table), ("_daily", per_day), ("_weekly", per_week), ("_correlation", corr)):
+    for name, t in (("", table), ("_daily", per_day), ("_weekly", per_week), ("_correlation", corr),
+                    ("_patches", sizes)):
         t.round(4).to_csv(out + name + ".csv", index=False)
     map_figure(ys, district, names, crop, out + "_map.png")
     bars_figure(table, latest, out + "_bars.png")
     series_figure(per_day, per_week, names, out + "_series.png")
     for col in SMOKE:
         scatter_figure(per_day, corr, out + f"_smoke_{col}.png", col)
-    for name, t in (("districts", table), ("correlation", corr)):
+    for name, t in (("districts", table), ("correlation", corr), ("patch sizes", sizes)):
         print(f"\n{name}\n" + t.round(3).to_string(index=False))
 
 

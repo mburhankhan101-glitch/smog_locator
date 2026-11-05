@@ -45,6 +45,7 @@ VIIRS_7D = {"N": "suomi-npp-viirs-c2/csv/SUOMI_VIIRS_C2_South_Asia_7d.csv",
             "N21": "noaa-21-viirs-c2/csv/J2_VIIRS_C2_South_Asia_7d.csv"}
 VIIRS_API = ("VIIRS_SNPP_NRT", "VIIRS_NOAA20_NRT", "VIIRS_NOAA21_NRT")
 RADIUS = {"VIIRS": 375, "S3": 1000}
+VIIRS_HOURS = ((1, 2.5), (12, 14.5))   # local hours a VIIRS satellite passes over (from October 2026's fire points)
 S2_UTC = 6                      # Sentinel-2 passes the area at about 05:55 UTC (10:55 local)
 LOCAL = timedelta(hours=5)      # Pakistan time
 PERSISTENT_DAYS, CELL = 3, 400
@@ -292,11 +293,16 @@ def figure(days, burned_on, possible_on, f, table, hits, compared, out, zoom_km=
     for sensor, colour in (("VIIRS", "orange"), ("S3", "deepskyblue")):
         ax[2].hist(f[f.sensor == sensor].local_hour, bins=bins, color=colour, alpha=0.8, label=sensor)
     ax[2].axvline(S2_UTC + 5, color="red", lw=1, ls="--", label="Sentinel-2 look (burn scars)")
-    ax[2].axvspan(15, 19, color="grey", alpha=0.2, label="late afternoon: no fire satellite passes")
+    edges = [0] + [h for w in VIIRS_HOURS for h in w] + [24]
+    blind = sum(b - a for a, b in zip(edges[::2], edges[1::2]))
+    for k, (a, b) in enumerate(zip(edges[::2], edges[1::2])):
+        ax[2].axvspan(a, b, color="grey", alpha=0.2, lw=0,
+                      label=f"no VIIRS pass: blind {blind:.0f} hours a day" if k == 0 else None)
     ax[2].set_xticks(range(0, 25, 3))
     ax[2].set_xlabel("local time (hour)"); ax[2].set_ylabel("fire points")
     ax[2].legend(fontsize=8)
-    ax[2].set_title("Fire points only exist at the moments a satellite passes", fontsize=10)
+    ax[2].set_title("Fire points only exist at the moments a satellite passes\n"
+                    "(the histogram shows the pass times, not when fields burn)", fontsize=10)
     # zoom: the window with the most burned area VIIRS could be compared with, fire point footprints drawn
     flagged, caught = compared["VIIRS", "burned"], hits["VIIRS", "burned"]
     n = int(zoom_km * 1000 / burn_data.RES)
@@ -309,16 +315,22 @@ def figure(days, burned_on, possible_on, f, table, hits, compared, out, zoom_km=
     ax[3].imshow(burns.false_colour(last)[zz].mean(-1), cmap="gray", vmin=0, vmax=1, extent=(0, zoom_km, 0, zoom_km),
                  interpolation="nearest")
     ax[3].contour(np.flipud(flagged[zz]), [0.5], colors="red", linewidths=1.2, extent=(0, zoom_km, 0, zoom_km))
+    shown = set()
     for sensor, colour in (("VIIRS", "orange"), ("S3", "deepskyblue")):
         p = f[(f.sensor == sensor) & ~f.persistent & (f.row >= r0) & (f.row < r0 + n) & (f.col >= c0) & (f.col < c0 + n)]
+        if len(p):
+            shown.add(sensor)
         x, y = (p.col - c0) * burn_data.RES / 1000, zoom_km - (p.row - r0) * burn_data.RES / 1000
         for xi, yi in zip(x, y):                        # the fire pixel's footprint under the point
             ax[3].add_patch(plt.Circle((xi, yi), RADIUS[sensor] / 1000, color=colour, alpha=0.25, lw=0))
         ax[3].scatter(x, y, s=40, c=colour, edgecolors="black", linewidths=0.5, zorder=3)
-    ax[3].legend(handles=[plt.Line2D([], [], color="red", lw=1.5, label="burned field (burn scar)"),
-                          plt.Line2D([], [], color="orange", marker="o", ls="", markeredgecolor="black",
-                                     label="VIIRS fire point, shaded: its 375 m pixel")],
-                 fontsize=9, loc="lower left", framealpha=0.9)
+    handles = [plt.Line2D([], [], color="red", lw=1.5, label="burned field (burn scar)"),
+               plt.Line2D([], [], color="orange", marker="o", ls="", markeredgecolor="black",
+                          label="VIIRS fire point, shaded: its 375 m pixel")]
+    if "S3" in shown:
+        handles.append(plt.Line2D([], [], color="deepskyblue", marker="o", ls="", markeredgecolor="black",
+                                  label="Sentinel-3 fire point, shaded: its 1 km pixel"))
+    ax[3].legend(handles=handles, fontsize=9, loc="lower left", framealpha=0.9)
     ax[3].set_xlim(0, zoom_km); ax[3].set_ylim(0, zoom_km)
     ax[3].set_title(f"Zoom {zoom_km} x {zoom_km} km (cyan box), {days[-1]}\n"
                     f"{caught[zz].sum() * burns.HA:,.0f} of {flagged[zz].sum() * burns.HA:,.0f} ha burned here had a "

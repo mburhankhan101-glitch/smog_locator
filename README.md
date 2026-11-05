@@ -111,7 +111,7 @@ scar) are left out: 23 points in 7 cells.
 |---|---|---|---|
 | VIIRS, burned | 4,058 ha (1-26 Oct) | 727 ha | **82%** |
 | VIIRS, possibly burned | 7,782 ha | 423 ha | 95% |
-| Sentinel-3, burned | 4,146 ha (1-26 Oct) | 20 ha | over 99% |
+| Sentinel-3, burned | 4,146 ha (1-26 Oct) | 29 ha | over 99% |
 
 ([table](runs/fires_2026-10-01_2026-10-27.csv), [every fire point](runs/fires_2026-10-01_2026-10-27_points.csv))
 
@@ -123,10 +123,15 @@ scar) are left out: 23 points in 7 cells.
   burned field within 375 m, burned at another time (a neighbour, or a scar Sentinel-2 dated
   differently). Fire points are reliable; they just see a small part of the burning.
 - **Fire points only exist at pass times.** 1,043 of the 1,061 VIIRS points are from the early
-  afternoon pass and 18 from the night pass. Sentinel-3 found only 4 in 76 passes over the whole month:
-  its morning and late-evening passes come when few fields burn, and a 1 km pixel needs a big fire to
-  stand out. Burning in the late afternoon, between the passes, leaves no fire point at all, but it
-  leaves a scar.
+  afternoon pass and 18 from the night pass. Even with three satellites, VIIRS passed over the area
+  only between about 12:00 and 14:30 and between 01:00 and 02:30 local time: it is blind for about
+  20 hours a day (shaded in the figure), so the histogram shows the pass times, not when fields burn.
+  Sentinel-3 found only 6 in 84 passes over the whole month: its morning and late-evening passes come
+  when few fields burn, and a 1 km pixel needs a big fire to stand out. Burning in the late afternoon,
+  between the passes, leaves no fire point at all, but it leaves a scar.
+- **Farmers are reported to burn later on purpose.** In Indian Punjab, burning is widely reported to
+  have shifted later in the afternoon once the satellite pass time became known. If the same happens
+  here, fire counts will miss more and more of it, while a burn scar does not depend on the time of day.
 
 ![Fire points against burn scars](runs/fires_2026-10-01_2026-10-27.png)
 
@@ -263,29 +268,56 @@ fire points missed. Then: does the smoke over a district rise and fall with its 
   burned pixel is spread evenly over the afternoons in its window. Sums over a week are close; single
   days are an estimate.
 
-| Farmland burned (burn scars) | 2025, 1-31 Oct | 2026, 1-31 Oct | 2025, whole season |
-|---|---|---|---|
-| Sheikhupura | 3,897 ha (1.3%) | 3,207 ha (1.1%) | 8,783 ha (3.0%) |
-| Nankana Sahib | 2,288 ha (1.3%) | **3,415 ha (1.9%)** | 6,353 ha (3.6%) |
-| **Both districts** | **6,184 ha (1.3%)** | **6,622 ha (1.4%)** | **15,137 ha (3.2%)** |
-| VIIRS fire points, both districts | 2,258 | 2,244 | 4,340 |
-| Burned farmland with a fire point on it | 1,841 of 6,372 ha | 1,806 of 6,914 ha | 4,044 of 15,655 ha |
-| **Missed by VIIRS** | **71%** (Sheikhupura 72%, Nankana Sahib 70%) | **74%** (76%, 72%) | **74%** (79%, 68%) |
+| Farmland burned (burn scars) | 2025, 1-31 Oct | 2026, 1-31 Oct | 2026, 1 Oct-4 Nov | 2025, whole season |
+|---|---|---|---|---|
+| Sheikhupura | 3,897 ha (1.3%) | 3,207 ha (1.1%) | 3,383 ha (1.1%) | 8,783 ha (3.0%) |
+| Nankana Sahib | 2,288 ha (1.3%) | **3,415 ha (1.9%)** | 3,543 ha (2.0%) | 6,353 ha (3.6%) |
+| **Both districts** | **6,184 ha (1.3%)** | **6,622 ha (1.4%)** | **6,926 ha (1.5%)** | **15,137 ha (3.2%)** |
+| VIIRS fire points, both districts | 2,258 | 2,231 | 2,926 | 4,340 |
+| Burned farmland with a fire point on it | 1,826 of 6,134 ha | 1,780 of 6,606 ha | 1,861 of 6,910 ha | 4,013 of 15,086 ha |
+| **Missed by VIIRS** | **70%** (Sheikhupura 71%, Nankana Sahib 69%) | **73%** (75%, 72%) | **73%** (75%, 72%) | **73%** (78%, 67%) |
 
 ([districts](runs/districts/districts.csv), [per day](runs/districts/districts_daily.csv),
-[per week](runs/districts/districts_weekly.csv))
+[per week](runs/districts/districts_weekly.csv). "Burned farmland with a fire point on it" counts
+farmland burned while VIIRS data covers it; a first version also counted burned land outside farmland,
+which moved each share by about one point.)
 
-- **Fire points saw about a quarter of the burned farmland**, in both districts and both years (68-79%
+- **Fire points saw about a quarter of the burned farmland**, in both districts and both years (67-78%
   missed). Step 2's result from the box (82%) holds over the two whole districts.
 - **October 2026 burned about as much as October 2025** (+7%), but the burning moved: Nankana Sahib
   burned half as much again (+49%), Sheikhupura 18% less.
 - **Most of 2026 is still to come.** By 31 October 2025 only 41% of that season's burned farmland had
-  been seen; by 15 November, 90%.
+  been seen; by 15 November, 90%. By 4 November 2026, 6,926 ha had burned, against 6,687 ha by the same
+  date in 2025.
+- **Smog hides burn scars too.** On 2 November 2026, the day after the season's busiest fire day,
+  Sentinel-2 flagged only 250 ha as burned but 4,388 ha as possibly burned. Thick smoke over the
+  fields probably blurs the dark char signal and pushes burns into the uncertain class; the next clear
+  image will tell. The latest days are always undercounted until a clear look shows the scars.
 - **"Possibly burned" doubled in 2026** (13,346 ha against 6,605), much of it on 21 October. That
   class is uncertain (step 2: fire points missed 95% of it, step 3: barely tied to rice), and haze
   may play a part, so it is not read as more burning.
 - **December 2025 is uncertain**: from mid December about 200 ha a week was flagged on days when fog
   hid 54-88% of the area. Some is probably real (late fields, sugarcane trash), some may be fog edges.
+
+**Is the result carried by tiny patches?** A 20 m pixel is 0.04 ha, and the smallest burns are the
+least certain. Grouping touching burned pixels into patches:
+
+| Patch size | Share of burned farmland, 2025 / 2026 | Missed by VIIRS, 2025 / 2026 |
+|---|---|---|
+| 1 pixel (0.04 ha) | 6% / 6% | 91% / 89% |
+| 2-8 pixels (0.08-0.32 ha) | 20% / 19% | 89% / 86% |
+| 9-24 pixels (0.36-0.96 ha) | 16% / 18% | 84% / 82% |
+| 25-99 pixels (1-4 ha) | 26% / 27% | 75% / 74% |
+| 100 pixels or more (4 ha and up) | 32% / 30% | 53% / 55% |
+| **9 pixels or more (0.36 ha and up)** | **74% / 75%** | **68% / 68%** |
+
+([patches](runs/districts/districts_patches.csv); 2025 whole season, 2026 to 4 November)
+
+- **A quarter of the burned farmland is in patches under 0.36 ha**, and VIIRS misses nearly 90% of
+  those. Leaving them all out, it still misses **68%**: the result is not carried by small, noisy
+  patches.
+- **Even big burns are missed half the time**: patches of 4 ha and more had no fire point on 53-55%
+  of their area. A VIIRS fire point needs the field alight during a pass, whatever its size.
 
 ![Burn scars and fire points in the two districts](runs/districts/districts_map.png)
 
@@ -302,10 +334,14 @@ retrieval flags as invalid or outlier: its monthly median *falls* from October t
 measurements, averaged over each district:
 
 - **UV aerosol index**: particles that absorb ultraviolet light, which smoke does, but so does dust.
-  Values on 86 of 91 days in 2025 and every day of October 2026.
+  Values on 86 of 91 days in 2025 and on all 35 days of 2026 so far (to 4 November).
 - **Carbon monoxide (CO) column**: a gas burning gives off. It lasts for weeks, so it builds up over
-  the whole region rather than marking single fires. Values on 70-71 days in 2025 and 28-29 in
-  October 2026.
+  the whole region rather than marking single fires. Values on 70-71 days in 2025 and 31-32 of 35 in
+  2026.
+
+**2026 has already passed 2025's smokiest day**: CO over Nankana Sahib reached 60.3 mmol/m² on
+2 November 2026 (2025's highest day: 58.8, on 29 October), with 56-57 over both districts on 1, 2
+and 5 November.
 
 | Week from (2025) | Farmland burned | Fire points | Aerosol index | CO (mmol/m²) |
 |---|---|---|---|---|
@@ -322,12 +358,12 @@ measurements, averaged over each district:
 
 Spearman correlation of each day's smoke with that day's fire points, per district:
 
-| | 2025 Sheikhupura | 2025 Nankana Sahib | 2026 Sheikhupura | 2026 Nankana Sahib |
+| | 2025 Sheikhupura | 2025 Nankana Sahib | 2026 Sheikhupura, to 4 Nov | 2026 Nankana Sahib, to 4 Nov |
 |---|---|---|---|---|
-| CO, day by day | 0.33 | 0.45 | 0.34 | 0.62 |
-| CO, seasonal trend taken out | 0.04 | -0.09 | 0.26 | -0.04 |
-| Aerosol index, day by day | 0.13 | 0.26 | 0.00 | -0.13 |
-| Aerosol index, seasonal trend taken out | -0.25 | -0.20 | -0.08 | -0.24 |
+| CO, day by day | 0.33 | 0.45 | 0.45 | 0.69 |
+| CO, seasonal trend taken out | 0.04 | -0.09 | 0.25 | -0.01 |
+| Aerosol index, day by day | 0.13 | 0.26 | 0.09 | -0.02 |
+| Aerosol index, seasonal trend taken out | -0.25 | -0.20 | -0.02 | -0.20 |
 
 ("Seasonal trend taken out": each series minus its 15-day running median, so the question becomes "more
 fire than usual for the time of season, more smoke than usual?". [All correlations, with p-values and
@@ -336,13 +372,13 @@ later.)
 
 - **CO follows the season.** In 2025 it rose with the burning and peaked in the same week (49.3 in the
   week from 29 October, the week with the most burned farmland), and the correlation day by day is
-  clear (0.33-0.62).
+  clear (0.33-0.69).
 - **Day to day, local fires do not explain the smoke.** With the seasonal build-up taken out, the CO
   correlation is close to zero in three of the four cases. CO dropped to 38.6 the week after the
   peak, while 2,662 ha still burned, and rose again to 45.8 in the week from 19 November, when the two
   districts had only 19 fire points. Which day is smoky is set by something else: wind bringing smoke
   from elsewhere (burning in Indian Punjab peaks in mid November), or still air and inversions
-  trapping it. Wind is the next thing to check.
+  trapping it. Weather is not analysed here.
 - **The aerosol index is not a smoke signal here.** Its highest week in October 2026 was the first
   (0.69), when almost nothing burned, which points to dust. With the trend taken out it even leans
   negative: on thick-haze days VIIRS may see fewer fires through the smoke.
