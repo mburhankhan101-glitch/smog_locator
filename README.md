@@ -34,6 +34,7 @@ python smoke.py 2025-10-01 2025-12-31          # Sentinel-5P smoke over each dis
 python smoke.py 2026-10-01 2026-12-31
 python districts.py fires                      # VIIRS fire points for both seasons (needs FIRMS_MAP_KEY)
 python districts.py report                     # district table, daily and weekly series, smoke
+python burn_map.py                             # the weekly burn map page and tehsil table, runs/districts/map/
 ```
 
 ## Step 1: burn scars
@@ -400,6 +401,31 @@ later.)
 
 ![Fire points against CO, day by day](runs/districts/districts_smoke_co.png)
 
+## The weekly burn map
+
+`burn_map.py` turns the same burn scars into a page meant for anyone, rebuilt after each weekly run:
+farmland burned per 1 km cell and per tehsil, week by week, 2026 against 2025, and one section on why
+fire points undercount. The page is a single file with its data inside
+([runs/districts/map/index.html](runs/districts/map/index.html)); the numbers are also in
+[tehsils.csv](runs/districts/map/tehsils.csv).
+
+- **17 tehsils**: every tehsil with at least 70% of its area inside the Sentinel-2 grid, about
+  1,043,000 ha of farmland. Besides the two districts' eight, that adds Lahore City and Lahore Cantt,
+  Kot Radha Kishan, Pattoki and Kasur, Kamoke and Nowshera Virkhan, Jaranwala and Pindi Bhattian; for
+  those partly outside, only the part inside counts. Land across the border in Indian Punjab is inside
+  the images but is not counted or shown.
+- **1 km cells, never single fields.** Punjab's teams act on satellite fire alerts against farmers, and
+  these scars have not been checked on the ground, so a public map should show where burning is
+  without pointing at one farm. A 1 km cell holds about 100 ha of land. Cells with less than 0.5 ha
+  burned are left blank.
+- **A week's scars** are those first seen on the Sentinel-2 images of that week (weeks from 1 October),
+  so weekly numbers here differ a little from step 5's, which spreads each scar over the days it may
+  have burned.
+- **By 15 November 2026**: 28,392 ha of farmland burned (2.7%), 9% less than by the same date in 2025
+  (31,098 ha); 75% of it had no VIIRS fire point (2025, whole season: 73%).
+- **Pindi Bhattian burns most by far**: 9,291 ha, 11.8% of its farmland inside the grid, against at
+  most 3.9% in any other tehsil; 7,562 ha by the same date in 2025, so not a one-year artefact.
+
 ## Roadmap
 
 - [x] Step 1: burn scars from Sentinel-2 (NBR, MIRBI), October 2026 so far
@@ -408,6 +434,7 @@ later.)
 - [x] Step 4: the whole season against 2025, per tehsil (2026 is updated as the season goes on)
 - [x] Step 5: the whole of Sheikhupura and Nankana Sahib districts: fire points against burn scars,
   and smoke from Sentinel-5P (weather not analysed)
+- [x] A weekly burn map for the public: 1 km cells and 17 tehsils, and why fire points undercount
 - [ ] Step 6: a field check in the rice belt; README, poster, v1.0
 
 ## Data and credits

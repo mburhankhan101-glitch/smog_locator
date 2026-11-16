@@ -1,0 +1,448 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Burn Scars Around Lahore</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,500..800&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a map-first report. Numbers strip, then the map with a side card, then the weekly bars,
+   the tehsil table, and one section on why fire points undercount. Haze greys, ember for burning. */
+:root {
+  --bg: #eceff1; --panel: #f8f9fa; --fg: #1b2126; --muted: #56626b; --line: #c8cfd4; --land: #dfe4e7;
+  --accent: #b93d0e; --y25: #8b98a2; --focus: #1f5f8b;
+  --r1: #f6dcae; --r2: #f1b46c; --r3: #e2783a; --r4: #b93d0e; --r5: #6f1a09;
+  --display: "Archivo", "Arial Narrow", Arial, sans-serif;
+  --body: "Public Sans", "Segoe UI", Arial, sans-serif;
+  --mono: "IBM Plex Mono", Consolas, "Courier New", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111518; --panel: #192024; --fg: #e3e7ea; --muted: #9ba6ae; --line: #2e383e; --land: #1f272c;
+    --accent: #f08540; --y25: #6b7781; --focus: #7fb7e0;
+    --r1: #4e2814; --r2: #853a15; --r3: #c4571b; --r4: #f08540; --r5: #ffc98f; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111518; --panel: #192024; --fg: #e3e7ea; --muted: #9ba6ae; --line: #2e383e; --land: #1f272c;
+  --accent: #f08540; --y25: #6b7781; --focus: #7fb7e0;
+  --r1: #4e2814; --r2: #853a15; --r3: #c4571b; --r4: #f08540; --r5: #ffc98f; color-scheme: dark;
+}
+body { background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 15px; line-height: 1.55; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-block: 28px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 44px; }
+h1, h2, h3 { font-family: var(--display); font-stretch: 85%; text-wrap: balance; margin: 0; line-height: 1.12; }
+h1 { font-size: clamp(30px, 5vw, 46px); font-weight: 750; letter-spacing: -0.01em; }
+h2 { font-size: clamp(22px, 3vw, 28px); font-weight: 700; }
+h3 { font-size: 17px; font-weight: 650; font-stretch: 90%; }
+p { margin: 0; max-width: 68ch; }
+.eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.muted { color: var(--muted); }
+.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+a { color: var(--focus); }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+header { display: flex; flex-direction: column; gap: 12px; }
+header p { font-size: 17px; color: var(--muted); }
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 2px solid var(--fg); }
+.stat { padding: 14px 16px 4px 0; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.stat + .stat { padding-left: 16px; border-left: 1px solid var(--line); }
+.stat b { font-family: var(--display); font-stretch: 80%; font-weight: 750; font-size: clamp(26px, 3.6vw, 38px); line-height: 1; font-variant-numeric: tabular-nums; }
+.stat b.hot { color: var(--accent); }
+.stat span { font-size: 13px; color: var(--muted); }
+@media (max-width: 760px) {
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stat:nth-child(3) { padding-left: 0; border-left: 0; }
+  .stat:nth-child(n+3) { border-top: 1px solid var(--line); }
+}
+section { display: flex; flex-direction: column; gap: 16px; }
+.mapgrid { display: grid; grid-template-columns: minmax(0, 2.1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 860px) { .mapgrid { grid-template-columns: minmax(0, 1fr); } }
+.controls { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.seg button { font: 500 13px var(--body); color: var(--fg); background: var(--panel); border: 0; padding: 6px 12px; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
+.slider { display: flex; flex-direction: column; gap: 2px; flex: 1 1 260px; min-width: 0; }
+.slider input { width: 100%; accent-color: var(--accent); }
+.slider label { font-size: 13px; }
+.mapbox { position: relative; width: 100%; aspect-ratio: 137 / 120; max-width: 100%; background: var(--land); border: 1px solid var(--line); }
+.mapbox canvas, .mapbox svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.mapbox svg .t { fill: transparent; stroke: var(--muted); stroke-width: 0.8; vector-effect: non-scaling-stroke; }
+.mapbox svg .t.off { stroke-dasharray: 3 3; opacity: 0.6; pointer-events: none; }
+.mapbox svg .t.on { cursor: pointer; }
+.mapbox svg .t.on:hover, .mapbox svg .t.on:focus-visible { stroke: var(--fg); stroke-width: 2; outline: none; }
+.mapbox svg .t.sel { stroke: var(--focus); stroke-width: 2.6; fill: color-mix(in srgb, var(--focus) 8%, transparent); }
+.mapbox svg .d { fill: none; stroke: var(--fg); stroke-width: 1.8; vector-effect: non-scaling-stroke; pointer-events: none; opacity: 0.75; }
+.mapbox svg text { font-family: var(--body); font-size: 2.1px; fill: var(--fg); paint-order: stroke; stroke: var(--land); stroke-width: 0.5px; pointer-events: none; }
+.mapbox svg text.dist { font-family: var(--display); font-weight: 700; font-size: 2.6px; letter-spacing: 0.08px; text-transform: uppercase; fill: var(--muted); }
+.mapbox svg .bar { fill: var(--fg); }
+.mapbox.small svg text.tl { display: none; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; font-size: 12.5px; color: var(--muted); }
+.legend i { display: inline-block; width: 14px; height: 14px; vertical-align: -3px; margin-right: 5px; border: 1px solid var(--line); }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 18px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.card .big { font-family: var(--display); font-stretch: 80%; font-weight: 750; font-size: 40px; line-height: 1; color: var(--accent); font-variant-numeric: tabular-nums; }
+.kv { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 12px; font-size: 14px; }
+.kv dt { color: var(--muted); } .kv dd { margin: 0; text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.card button.clear { align-self: flex-start; font: 500 13px var(--body); background: none; border: 1px solid var(--line); color: var(--fg); border-radius: 6px; padding: 4px 10px; cursor: pointer; }
+.chart svg { width: 100%; height: auto; display: block; overflow: visible; }
+.chart text { font-family: var(--mono); font-size: 11px; fill: var(--muted); }
+.chart .grid { stroke: var(--line); stroke-width: 1; }
+.chart .b26 { fill: var(--accent); } .chart .b25 { fill: var(--y25); }
+.images { display: flex; flex-wrap: wrap; gap: 6px; }
+.images span { font-family: var(--mono); font-size: 12px; border: 1px solid var(--line); border-radius: 4px; padding: 2px 7px; background: var(--panel); }
+.images span.low { border-color: var(--accent); color: var(--accent); }
+.tablewrap { overflow-x: auto; border-top: 2px solid var(--fg); }
+table { border-collapse: collapse; width: 100%; min-width: 760px; font-size: 14px; }
+th, td { padding: 8px 10px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+th button { font: 600 12px var(--body); color: var(--muted); background: none; border: 0; padding: 0; cursor: pointer; text-transform: uppercase; letter-spacing: 0.04em; }
+th button[aria-sort] { color: var(--fg); }
+td { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+td:first-child { font-family: var(--body); }
+td small { display: block; color: var(--muted); font-size: 12px; font-family: var(--body); }
+tbody tr { cursor: pointer; } tbody tr:hover { background: var(--panel); }
+tbody tr.sel { background: color-mix(in srgb, var(--focus) 12%, transparent); }
+.sharebar { display: inline-block; height: 8px; background: var(--accent); vertical-align: 0; margin-right: 8px; border-radius: 1px; }
+.why { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 760px) { .why { grid-template-columns: minmax(0, 1fr); } }
+.why .card b.k { font-family: var(--display); font-stretch: 80%; font-size: 32px; font-weight: 750; color: var(--accent); line-height: 1; }
+.day svg { width: 100%; height: auto; display: block; }
+.day text { font-family: var(--mono); font-size: 10px; fill: var(--muted); }
+.notes { display: grid; gap: 10px; padding-left: 20px; margin: 0; max-width: 72ch; }
+footer { border-top: 1px solid var(--line); padding-top: 16px; font-size: 13px; color: var(--muted); display: flex; flex-direction: column; gap: 6px; }
+@media (prefers-reduced-motion: no-preference) { .mapbox canvas { transition: opacity 120ms; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <span class="eyebrow" id="eyebrow">Sentinel-2 burn scars</span>
+    <h1>Farmland burned around Lahore, week by week</h1>
+    <p id="lede"></p>
+    <div class="stats" id="stats"></div>
+  </header>
+
+  <section aria-labelledby="map-h">
+    <h2 id="map-h">Where the fields burned</h2>
+    <div class="controls">
+      <div class="seg" role="group" aria-label="Season">
+        <button id="y2026" aria-pressed="true">2026</button><button id="y2025" aria-pressed="false">2025</button>
+      </div>
+      <div class="seg" role="group" aria-label="What to show">
+        <button id="mcum" aria-pressed="true">Season to date</button><button id="mweek" aria-pressed="false">That week only</button>
+      </div>
+      <div class="slider">
+        <label for="week" id="weeklabel"></label>
+        <input type="range" id="week" min="0" max="0" step="1" value="0">
+      </div>
+    </div>
+    <div class="mapgrid">
+      <div style="display:flex;flex-direction:column;gap:10px;min-width:0">
+        <div class="mapbox" id="mapbox">
+          <canvas id="cv" aria-hidden="true"></canvas>
+          <svg id="ov" viewBox="0 0 137 120" preserveAspectRatio="none" role="img" aria-label="Map of tehsils with burned farmland per square kilometre"></svg>
+        </div>
+        <div class="legend" id="legend"></div>
+      </div>
+      <aside class="card" id="info" aria-live="polite"></aside>
+    </div>
+  </section>
+
+  <section aria-labelledby="week-h" class="chart">
+    <h2 id="week-h">New scars each week, 2026 against 2025</h2>
+    <p class="muted">Hectares of farmland first seen burned on the Sentinel-2 images taken that week, all tehsils on this page.</p>
+    <div id="bars"></div>
+    <div class="eyebrow">2026 images and how much of the area was clear</div>
+    <div class="images" id="images"></div>
+  </section>
+
+  <section aria-labelledby="tab-h">
+    <h2 id="tab-h">By tehsil</h2>
+    <p class="muted" id="tabnote"></p>
+    <div class="tablewrap"><table id="tab"><thead></thead><tbody></tbody></table></div>
+  </section>
+
+  <section aria-labelledby="why-h">
+    <h2 id="why-h"></h2>
+    <p id="whylede"></p>
+    <div class="why" id="why"></div>
+  </section>
+
+  <section aria-labelledby="notes-h">
+    <h2 id="notes-h">Before you use these numbers</h2>
+    <ul class="notes">
+      <li><b>Nothing here has been checked on the ground yet.</b> The scars come from satellite images alone.</li>
+      <li><b>Scars are a lower bound.</b> A field burned and ploughed between two clear images, a very small field, or straw burned in a heap leaves no scar the images can see.</li>
+      <li><b>The latest week is never complete.</b> Burns under cloud or smoke show up only on the next clear image.</li>
+      <li><b>"Possibly burned" land is left out.</b> Fields that darkened but not enough to be sure are not counted; a check on a clear image found that most of them were not burns.</li>
+      <li><b>Farmland</b> is ESA WorldCover 2021 cropland. In Lahore City and Lahore Cantt it is a small share of mostly built-up land, and scars there are less certain.</li>
+      <li><b>One square kilometre is the smallest unit on this page, on purpose.</b> Each cell mixes many fields, so the map shows where burning happens without pointing at any one farm.</li>
+      <li><b>Tehsil outlines</b> are geoBoundaries (ADM3) and some have changed since. Tehsils partly outside the images count only the part inside.</li>
+    </ul>
+  </section>
+
+  <footer>
+    <span id="foot"></span>
+    <span>Data: Sentinel-2 L2A and ESA WorldCover 2021 (Microsoft Planetary Computer; contains modified Copernicus Sentinel data), VIIRS active fires from NASA FIRMS (near real time for 2026, standard processing for 2025; persistent hot spots such as kilns removed), tehsil outlines from geoBoundaries (CC BY 4.0).</span>
+    <span>Method and code: <a href="https://github.com/mburhankhan101-glitch/smog_locator" target="_blank" rel="noopener">github.com/mburhankhan101-glitch/smog_locator</a></span>
+  </footer>
+</div>
+
+<script>
+const DATA = /*DATA*/null;
+const $ = (id) => document.getElementById(id);
+const fmt = (x, d = 0) => Number(x).toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
+const pct = (x, d = 0) => (x * 100).toFixed(d) + "%";
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const day = (s) => { const [y, m, d] = s.split("-").map(Number); return `${d} ${MONTHS[m - 1]}`; };
+const addDays = (s, n) => { const t = new Date(s + "T00:00:00Z"); t.setUTCDate(t.getUTCDate() + n); return t.toISOString().slice(0, 10); };
+const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const MIN_HA = 0.5;                               // cells with less are left blank (a few pixels: noise)
+const BINS = [2, 5, 10, 20];                      // ha per km² cell: 0.5-2, 2-5, 5-10, 10-20, 20+
+const binOf = (ha) => BINS.findIndex((b) => ha < b) === -1 ? 4 : BINS.findIndex((b) => ha < b);
+
+const T = DATA.totals, latest = DATA.latest_image;
+const reported = DATA.table;
+const weekStart = (year, w) => addDays(`${year}-10-01`, 7 * w);
+const weekEnd = (year, w) => { const e = addDays(weekStart(year, w), 6); return year === "2026" && e > latest ? latest : e; };
+const change = (a, b) => (b > 0 ? (a / b - 1) : NaN);
+
+// ---------- header ----------
+(function header() {
+  const w26 = T.weekly["2026"], last = w26[w26.length - 1];
+  const imgs = DATA.images.filter((i) => i.day >= last.start).map((i) => day(i.day));
+  $("eyebrow").textContent = `Sentinel-2 burn scars · updated ${day(DATA.updated)} ${DATA.updated.slice(0, 4)} · latest image ${day(latest)}`;
+  $("lede").textContent = `After the rice harvest, the straw left in the fields is often burned. This page maps the black scars that burning leaves on ${fmt(T.farmland_ha)} ha of farmland in ${reported.length} tehsils of Sheikhupura, Nankana Sahib and their neighbours, from Sentinel-2 images taken every few days, and compares them with the fire points satellites report.`;
+  const c = change(T["2026"].burned_ha, T["2025_same_date"].burned_ha);
+  const stats = [
+    [fmt(T["2026"].burned_ha) + " ha", `farmland burned, 1 Oct to ${day(latest)} 2026 (${pct(T["2026"].share, 1)} of all farmland here)`, true],
+    [(c >= 0 ? "+" : "−") + pct(Math.abs(c)), `against 2025 by the same date (${fmt(T["2025_same_date"].burned_ha)} ha)`],
+    [fmt(last.burned_ha) + " ha", `new scars on the images of ${imgs.join(" and ") || "this week"} (week from ${day(last.start)}, not over yet)`],
+    [pct(T["2026"].missed), `of the burned farmland had no VIIRS fire point on it`, true],
+  ];
+  $("stats").innerHTML = stats.map(([b, s, hot]) => `<div class="stat"><b class="${hot ? "hot" : ""}">${b}</b><span>${s}</span></div>`).join("");
+  $("foot").textContent = `Updated ${day(DATA.updated)} ${DATA.updated.slice(0, 4)}. Scars to the Sentinel-2 image of ${day(latest)}; 2025 compared to ${day(T["2025_same_date"].up_to)} 2025 and over its whole season (to ${day(T["2025_season"].up_to)}).`;
+})();
+
+// ---------- map ----------
+const G = DATA.grid, state = { year: "2026", mode: "cum", week: DATA.weeks["2026"] - 1, sel: null };
+const byYear = {};
+for (const y of Object.keys(DATA.cells)) {
+  const weeks = Array.from({ length: DATA.weeks[y] }, () => []);
+  for (const [c, w, v] of DATA.cells[y]) weeks[w].push([c, v / 10]);
+  byYear[y] = weeks;
+}
+function values() {
+  const v = new Float32Array(G.rows * G.cols), weeks = byYear[state.year];
+  const from = state.mode === "cum" ? 0 : state.week;
+  for (let w = from; w <= state.week; w++) for (const [c, ha] of weeks[w]) v[c] += ha;
+  return v;
+}
+function drawMap() {
+  const box = $("mapbox"), cv = $("cv"), dpr = window.devicePixelRatio || 1;
+  const W = box.clientWidth, H = box.clientHeight;
+  box.classList.toggle("small", W < 600);
+  cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+  const g = cv.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H);
+  const ramp = ["--r1", "--r2", "--r3", "--r4", "--r5"].map(css);
+  const cw = W / G.cols, ch = H / G.rows, v = values();
+  for (let i = 0; i < v.length; i++) {
+    if (v[i] < MIN_HA) continue;
+    g.fillStyle = ramp[binOf(v[i])];
+    g.fillRect((i % G.cols) * cw, Math.floor(i / G.cols) * ch, cw + 0.4, ch + 0.4);
+  }
+}
+function buildOverlay() {
+  const ns = "http://www.w3.org/2000/svg", svg = $("ov");
+  const el = (tag, attrs, parent = svg) => { const e = document.createElementNS(ns, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent.appendChild(e); return e; };
+  const [wkm, hkm] = DATA.size_km;
+  svg.setAttribute("viewBox", `0 0 ${wkm} ${hkm}`);
+  $("mapbox").style.aspectRatio = `${wkm} / ${hkm}`;
+  for (const t of DATA.tehsils) {
+    const p = el("path", { d: t.path, class: "t " + (t.reported ? "on" : "off"), "data-name": t.name });
+    if (t.reported) {
+      p.setAttribute("tabindex", "0"); p.setAttribute("role", "button"); p.setAttribute("aria-label", `${t.name} tehsil`);
+      p.addEventListener("click", () => select(state.sel === t.name ? null : t.name));
+      p.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); select(t.name); } });
+      p.addEventListener("mouseenter", () => { if (!state.sel) showInfo(t.name); });
+      p.addEventListener("mouseleave", () => { if (!state.sel) showInfo(null); });
+    }
+  }
+  for (const d in DATA.districts) el("path", { d: DATA.districts[d], class: "d" });
+  for (const t of DATA.tehsils) if (t.reported && t.label) {
+    const tx = el("text", { x: t.label[0], y: t.label[1], "text-anchor": "middle", class: "tl" }); tx.textContent = t.name;
+  }
+  // scale bar, 10 km, bottom left
+  const y = hkm - 4;
+  el("rect", { x: 3, y: y, width: 10, height: 0.6, class: "bar" });
+  const s = el("text", { x: 3, y: y - 1 }); s.textContent = "10 km";
+  const n = el("text", { x: wkm - 4, y: 5, "text-anchor": "middle" }); n.textContent = "N ↑";
+}
+function legend() {
+  const labels = ["0.5–2", "2–5", "5–10", "10–20", "20 or more"];
+  $("legend").innerHTML = labels.map((l, i) => `<span><i style="background:var(--r${i + 1})"></i>${l}</span>`).join("") +
+    `<span>ha of farmland burned per km² (cells under ${MIN_HA} ha left blank)</span><span>Shown only inside the ${reported.length} tehsils counted; dashed outline: tehsil mostly outside the images</span>`;
+}
+function weekLabel() {
+  const y = state.year, w = state.week, a = weekStart(y, w), b = weekEnd(y, w);
+  const span = `${day(a)}–${day(b)} ${y}`;
+  const open = y === "2026" && w === DATA.weeks["2026"] - 1 ? " (week not over)" : "";
+  $("weeklabel").textContent = state.mode === "cum" ? `Scars seen from 1 Oct up to the week of ${span}${open}` : `New scars seen in the week of ${span}${open}`;
+}
+function setYear(y) {
+  state.year = y; state.week = DATA.weeks[y] - 1;
+  $("week").max = DATA.weeks[y] - 1; $("week").value = state.week;
+  $("y2026").setAttribute("aria-pressed", y === "2026"); $("y2025").setAttribute("aria-pressed", y === "2025");
+  weekLabel(); drawMap();
+}
+function setMode(m) {
+  state.mode = m;
+  $("mcum").setAttribute("aria-pressed", m === "cum"); $("mweek").setAttribute("aria-pressed", m === "week");
+  weekLabel(); drawMap();
+}
+$("y2026").onclick = () => setYear("2026"); $("y2025").onclick = () => setYear("2025");
+$("mcum").onclick = () => setMode("cum"); $("mweek").onclick = () => setMode("week");
+$("week").addEventListener("input", (e) => { state.week = Number(e.target.value); weekLabel(); drawMap(); });
+
+// ---------- side card ----------
+function miniBars(series) {
+  const max = Math.max(...series, 1), W = 240, H = 48, bw = W / series.length;
+  return `<svg viewBox="0 0 ${W} ${H + 14}" style="width:100%;height:auto" aria-hidden="true">` +
+    series.map((v, i) => `<rect x="${i * bw + 2}" y="${H - (v / max) * H}" width="${bw - 4}" height="${(v / max) * H}" style="fill:var(--accent)"/>` +
+      `<text x="${i * bw + bw / 2}" y="${H + 11}" text-anchor="middle" style="font:9px var(--mono);fill:var(--muted)">${day(weekStart("2026", i)).replace(" ", " ")}</text>`).join("") + `</svg>`;
+}
+function showInfo(name) {
+  const r = name && reported.find((t) => t.tehsil === name);
+  let html;
+  if (!r) {
+    const c = change(T["2026"].burned_ha, T["2025_same_date"].burned_ha);
+    html = `<span class="eyebrow">All ${reported.length} tehsils</span>
+      <div class="big">${fmt(T["2026"].burned_ha)} ha</div>
+      <span class="muted">farmland burned, 1 Oct to ${day(latest)} 2026</span>
+      <dl class="kv"><dt>Share of farmland</dt><dd>${pct(T["2026"].share, 1)}</dd>
+      <dt>2025, same dates</dt><dd>${fmt(T["2025_same_date"].burned_ha)} ha</dd>
+      <dt>Change</dt><dd>${(c >= 0 ? "+" : "−") + pct(Math.abs(c))}</dd>
+      <dt>2025, whole season</dt><dd>${fmt(T["2025_season"].burned_ha)} ha</dd>
+      <dt>VIIRS fire points, 2026</dt><dd>${fmt(T["2026"].fire_points)}</dd>
+      <dt>Burned farmland with no fire point</dt><dd>${pct(T["2026"].missed)}</dd></dl>
+      <span class="muted" style="font-size:13px">Point at or tap a tehsil, or a row in the table, for its numbers.</span>`;
+  } else {
+    const c = change(r.burned_ha_2026, r.burned_ha_2025_same_date);
+    html = `<span class="eyebrow">${r.district ? r.district + " district" : ""}</span>
+      <h3 style="font-size:24px">${r.tehsil}</h3>
+      ${r.inside_share < 0.99 ? `<span class="muted" style="font-size:13px">${pct(r.inside_share)} of the tehsil is inside the images; numbers cover that part.</span>` : ""}
+      <div class="big">${fmt(r.burned_ha_2026)} ha</div>
+      <span class="muted">farmland burned, 1 Oct to ${day(latest)} 2026</span>
+      <dl class="kv"><dt>Share of farmland</dt><dd>${pct(r.share_2026, 1)}</dd>
+      <dt>2025, same dates</dt><dd>${fmt(r.burned_ha_2025_same_date)} ha</dd>
+      <dt>Change</dt><dd>${isNaN(c) ? "–" : (c >= 0 ? "+" : "−") + pct(Math.abs(c))}</dd>
+      <dt>VIIRS fire points, 2026</dt><dd>${fmt(r.fire_points_2026)}</dd>
+      <dt>Burned farmland with no fire point</dt><dd>${r.missed_2026 == null ? "–" : pct(r.missed_2026)}</dd></dl>
+      <span class="eyebrow">New scars per week, 2026</span>${miniBars(r.weekly_2026)}
+      <button class="clear" id="clearsel">Show all tehsils</button>`;
+  }
+  $("info").innerHTML = html;
+  const b = $("clearsel"); if (b) b.onclick = () => select(null);
+}
+function select(name) {
+  state.sel = name;
+  document.querySelectorAll("#ov .t").forEach((p) => p.classList.toggle("sel", p.dataset.name === name));
+  document.querySelectorAll("#tab tbody tr").forEach((tr) => tr.classList.toggle("sel", tr.dataset.name === name));
+  showInfo(name);
+}
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && state.sel) select(null); });
+
+// ---------- weekly bars ----------
+function bars() {
+  const a = T.weekly["2025"], b = T.weekly["2026"], n = Math.max(a.length, b.length);
+  const max = Math.max(...a.map((x) => x.burned_ha), ...b.map((x) => x.burned_ha));
+  const step = max > 8000 ? 2000 : max > 4000 ? 1000 : 500, top = Math.ceil(max / step) * step;
+  const W = 760, H = 240, L = 54, B = 26, pw = (W - L) / n, y = (v) => H - B - (v / top) * (H - B - 10);
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Hectares of new scars per week, 2026 against 2025">
+    <defs><pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+    <rect width="6" height="6" style="fill:var(--panel)"/><line x1="0" y1="0" x2="0" y2="6" style="stroke:var(--accent);stroke-width:3"/></pattern></defs>`;
+  for (let v = 0; v <= top; v += step) s += `<line class="grid" x1="${L}" x2="${W}" y1="${y(v)}" y2="${y(v)}"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${fmt(v)}</text>`;
+  for (let i = 0; i < n; i++) {
+    const x = L + i * pw, bw = pw * 0.36;
+    if (a[i]) s += `<rect class="b25" x="${x + pw * 0.12}" y="${y(a[i].burned_ha)}" width="${bw}" height="${H - B - y(a[i].burned_ha)}"><title>2025, week from ${day(a[i].start)}: ${fmt(a[i].burned_ha)} ha, ${fmt(a[i].fire_points)} fire points</title></rect>`;
+    if (b[i]) {
+      const open = i === b.length - 1;
+      s += `<rect class="b26" x="${x + pw * 0.5}" y="${y(b[i].burned_ha)}" width="${bw}" height="${H - B - y(b[i].burned_ha)}" ${open ? 'style="fill:url(#hatch)"' : ""}><title>2026, week from ${day(b[i].start)}${open ? " (not over)" : ""}: ${fmt(b[i].burned_ha)} ha, ${fmt(b[i].fire_points)} fire points</title></rect>`;
+      if (open) s += `<text x="${x + pw * 0.5 + bw / 2}" y="${y(b[i].burned_ha) - 5}" text-anchor="middle">so far</text>`;
+    }
+    if (i % 2 === 0 || n <= 8) s += `<text x="${x + pw / 2}" y="${H - 8}" text-anchor="middle">${day(weekStart("2026", i))}</text>`;
+  }
+  s += `<rect x="${L + 6}" y="6" width="10" height="10" class="b26"/><text x="${L + 22}" y="15">2026</text>
+        <rect x="${L + 70}" y="6" width="10" height="10" class="b25"/><text x="${L + 86}" y="15">2025</text></svg>`;
+  $("bars").innerHTML = s;
+  $("images").innerHTML = DATA.images.map((i) => `<span class="${i.clear < 0.4 ? "low" : ""}">${day(i.day)} · ${pct(i.clear)} clear</span>`).join("");
+}
+
+// ---------- table ----------
+const COLS = [
+  ["tehsil", "Tehsil", (r) => `${r.tehsil}<small>${r.district}${r.inside_share < 0.99 ? ` · ${pct(r.inside_share)} in view` : ""}</small>`],
+  ["farmland_ha", "Farmland", (r) => fmt(r.farmland_ha)],
+  ["burned_ha_2026", "Burned 2026", (r) => fmt(r.burned_ha_2026)],
+  ["share_2026", "% of farmland", (r) => `<span class="sharebar" style="width:${Math.min(r.share_2026 / 0.12, 1) * 60}px"></span>${pct(r.share_2026, 1)}`],
+  ["burned_ha_2025_same_date", "2025, same dates", (r) => fmt(r.burned_ha_2025_same_date)],
+  ["chg", "Change", (r) => { const c = change(r.burned_ha_2026, r.burned_ha_2025_same_date); return isNaN(c) ? "–" : (c >= 0 ? "+" : "−") + pct(Math.abs(c)); }],
+  ["fire_points_2026", "Fire points", (r) => fmt(r.fire_points_2026)],
+  ["missed_2026", "No fire point", (r) => (r.missed_2026 == null ? "–" : pct(r.missed_2026))],
+];
+const tsort = { key: "burned_ha_2026", dir: -1 };
+function table() {
+  const val = (r, k) => (k === "chg" ? change(r.burned_ha_2026, r.burned_ha_2025_same_date) : r[k]);
+  const rows = [...reported].sort((a, b) => {
+    const x = val(a, tsort.key), y = val(b, tsort.key);
+    return (typeof x === "string" ? x.localeCompare(y) : (x ?? -1) - (y ?? -1)) * tsort.dir;
+  });
+  $("tab").tHead.innerHTML = "<tr>" + COLS.map(([k, l]) => `<th scope="col"><button data-k="${k}" ${tsort.key === k ? `aria-sort="${tsort.dir < 0 ? "descending" : "ascending"}"` : ""}>${l}${tsort.key === k ? (tsort.dir < 0 ? " ↓" : " ↑") : ""}</button></th>`).join("") + "</tr>";
+  $("tab").tBodies[0].innerHTML = rows.map((r) => `<tr data-name="${r.tehsil}" class="${state.sel === r.tehsil ? "sel" : ""}">` + COLS.map(([, , f]) => `<td>${f(r)}</td>`).join("") + "</tr>").join("");
+  $("tab").tHead.querySelectorAll("button").forEach((b) => (b.onclick = () => {
+    const k = b.dataset.k; tsort.dir = tsort.key === k ? -tsort.dir : (k === "tehsil" ? 1 : -1); tsort.key = k; table();
+  }));
+  $("tab").tBodies[0].querySelectorAll("tr").forEach((tr) => (tr.onclick = () => {
+    select(state.sel === tr.dataset.name ? null : tr.dataset.name);
+    $("mapbox").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "center" });
+  }));
+  $("tabnote").textContent = `Farmland and burned area in hectares, 1 October to ${day(latest)}; 2025 to ${day(T["2025_same_date"].up_to)} 2025. "No fire point": share of the burned farmland with no VIIRS fire point on it while it burned. Select a column to sort, a row to show it on the map.`;
+}
+
+// ---------- why fire points undercount ----------
+function why() {
+  const caught = 1 - T["2026"].missed;
+  $("why-h").textContent = `Why fire points miss ${caught < 0.3 ? "about three-quarters" : pct(T["2026"].missed)} of the burning`;
+  $("whylede").textContent = `A VIIRS fire point marks a spot where a satellite saw flames as it passed. A burn scar is the blackened field left afterwards. Of the ${fmt(T["2026"].burned_ha)} ha of farmland that burned here by ${day(latest)}, only ${pct(caught)} had a fire point on it; in the whole 2025 season, ${pct(1 - T["2025_season"].missed)}.`;
+  const hours = DATA.viirs_hours, seen = hours.reduce((s, [a, b]) => s + (b - a), 0);
+  const fmtH = (h) => `${String(Math.floor(h)).padStart(2, "0")}:${h % 1 ? "30" : "00"}`;
+  let day24 = `<svg viewBox="0 0 300 46" aria-label="VIIRS passes over the area twice a day">`;
+  day24 += `<rect x="0" y="8" width="300" height="16" style="fill:var(--line)"/>`;
+  for (const [a, b] of hours) day24 += `<rect x="${a / 24 * 300}" y="8" width="${(b - a) / 24 * 300}" height="16" style="fill:var(--accent)"/>`;
+  for (const h of [0, 6, 12, 18, 24]) day24 += `<text x="${Math.min(Math.max(h / 24 * 300, 8), 292)}" y="40" text-anchor="middle">${String(h).padStart(2, "0")}:00</text>`;
+  day24 += `</svg>`;
+  const p26 = DATA.patches.filter((p) => p.season === 2026);
+  const caughtHa = (ps) => ps.reduce((s, p) => s + p.viirs_compared_ha * (1 - p.viirs_missed_share), 0);
+  const compHa = (ps) => ps.reduce((s, p) => s + p.viirs_compared_ha, 0);
+  const small = p26.filter((p) => ["1", "2-8"].includes(p.patch_pixels)), big = p26.filter((p) => p.patch_pixels === "100+");
+  const smallShare = small.reduce((s, p) => s + p.share_of_burned, 0);
+  const smallMissed = 1 - caughtHa(small) / compHa(small), bigMissed = 1 - caughtHa(big) / compHa(big);
+  const after = DATA.images.filter((i) => i.day >= `${latest.slice(0, 4)}-11-01`);
+  const worst = after.length ? after.reduce((m, i) => (i.clear < m.clear ? i : m)) : DATA.images[0];
+  const cards = [
+    [`${Math.round(24 - seen)} hours`, "a day with no VIIRS pass",
+      `VIIRS satellites cross this area around ${hours.map(([a, b]) => `${fmtH(a)}–${fmtH(b)}`).reverse().join(" and ")}, local time. A field that burns in the late afternoon or evening, and is out within an hour or two, is never seen alight. In Indian Punjab, farmers have been widely reported to burn later in the day for this reason.` + day24],
+    ["Days", "a scar stays visible",
+      "Flames last minutes to hours; the blackened field stays dark until it is ploughed. Sentinel-2 passes every few days, and any clear image catches the scar, whatever the hour the field burned."],
+    [pct(smallMissed), "of small burns had no fire point",
+      `Patches under 0.36 ha (nine 20 m pixels) were ${pct(smallShare)} of the burned farmland in 2026, and VIIRS, with pixels of about 375 m, missed ${pct(smallMissed)} of them. Even patches of 4 ha and more had no fire point on ${pct(bigMissed)} of their area: size does not help a field that burned between passes.`],
+    [pct(worst.clear), `of the area was clear on ${day(worst.day)}`,
+      "Cloud and thick smoke block both satellites. Flames hidden on the day are gone for good; a scar hidden on the day still shows on the next clear image."],
+  ];
+  $("why").innerHTML = cards.map(([k, l, t]) => `<div class="card"><div><b class="k">${k}</b> <span class="muted">${l}</span></div><p style="font-size:14px">${t}</p></div>`).join("");
+}
+
+// ---------- start ----------
+buildOverlay(); legend(); setYear("2026"); showInfo(null); bars(); table(); why();
+new ResizeObserver(() => drawMap()).observe($("mapbox"));
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", drawMap);
+new MutationObserver(drawMap).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+</script>
