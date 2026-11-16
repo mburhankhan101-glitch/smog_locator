@@ -4,8 +4,10 @@
 
 Every October to December, after the rice harvest, farmers in Punjab burn the leftover straw to clear
 their fields for wheat. The smoke adds to the smog over Lahore. Satellite fire points (the hot spots
-shown on fire maps and on windy.com) only catch fires burning at the moment a satellite passes, and
-farmers have shifted to burning later in the day. This project maps the **burn scars** instead: a
+shown on fire maps and on windy.com) only catch fires burning at the moment a satellite passes, about
+13:30 and 01:30 for VIIRS. A field that burns at any other hour is missed, and in Indian Punjab the
+burning has moved into the late afternoon, after the midday pass
+([Jethva 2026](https://doi.org/10.3390/rs18101506)). This project maps the **burn scars** instead: a
 burned field stays black for days, whenever it burned. It is built step by step, with the burning
 season of 2026 as it happens.
 
@@ -130,9 +132,11 @@ scar) are left out: 23 points in 7 cells.
   Sentinel-3 found only 6 in 84 passes over the whole month: its morning and late-evening passes come
   when few fields burn, and a 1 km pixel needs a big fire to stand out. Burning in the late afternoon,
   between the passes, leaves no fire point at all, but it leaves a scar.
-- **Farmers are reported to burn later on purpose.** In Indian Punjab, burning is widely reported to
-  have shifted later in the afternoon once the satellite pass time became known. If the same happens
-  here, fire counts will miss more and more of it, while a burn scar does not depend on the time of day.
+- **In Indian Punjab, burning has moved later.** A geostationary satellite, which looks every few
+  minutes, shows the peak of stubble burning in north-western India moving from about 13:00-14:00 to
+  16:00-17:00 local time since 2022 ([Jethva 2026](https://doi.org/10.3390/rs18101506)). This project
+  cannot tell when fields burn in Pakistani Punjab. If burning here moves later too, fire counts will
+  miss more and more of it, while a burn scar does not depend on the time of day.
 
 ![Fire points against burn scars](runs/fires_2026-10-01_2026-10-27.png)
 
@@ -445,3 +449,7 @@ SYNERGY aerosol and Sentinel-5P (TROPOMI) aerosol index and carbon monoxide from
 Sentinel data (2025-2026). VIIRS active fire data from [NASA FIRMS](https://firms.modaps.eosdis.nasa.gov/)
 (standard processing and LANCE near real time). Tehsil boundaries from
 [geoBoundaries](https://www.geoboundaries.org/) (CC BY 4.0); the district outlines are built from them.
+
+## Author
+
+Burhan Khan, BS Computer Science, UMT Lahore. [LinkedIn](https://www.linkedin.com/in/burhan-khan-b4458737b/)

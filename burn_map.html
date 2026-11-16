@@ -184,6 +184,7 @@ footer { border-top: 1px solid var(--line); padding-top: 16px; font-size: 13px; 
     <span id="foot"></span>
     <span>Data: Sentinel-2 L2A and ESA WorldCover 2021 (Microsoft Planetary Computer; contains modified Copernicus Sentinel data), VIIRS active fires from NASA FIRMS (near real time for 2026, standard processing for 2025; persistent hot spots such as kilns removed), tehsil outlines from geoBoundaries (CC BY 4.0).</span>
     <span>Method and code: <a href="https://github.com/mburhankhan101-glitch/smog_locator" target="_blank" rel="noopener">github.com/mburhankhan101-glitch/smog_locator</a></span>
+    <span>Made by Burhan Khan · <a href="https://www.linkedin.com/in/burhan-khan-b4458737b/" target="_blank" rel="noopener">LinkedIn</a></span>
   </footer>
 </div>
 
@@ -429,7 +430,7 @@ function why() {
   const worst = after.length ? after.reduce((m, i) => (i.clear < m.clear ? i : m)) : DATA.images[0];
   const cards = [
     [`${Math.round(24 - seen)} hours`, "a day with no VIIRS pass",
-      `VIIRS satellites cross this area around ${hours.map(([a, b]) => `${fmtH(a)}–${fmtH(b)}`).reverse().join(" and ")}, local time. A field that burns in the late afternoon or evening, and is out within an hour or two, is never seen alight. In Indian Punjab, farmers have been widely reported to burn later in the day for this reason.` + day24],
+      `VIIRS satellites cross this area around ${hours.map(([a, b]) => `${fmtH(a)}–${fmtH(b)}`).reverse().join(" and ")}, local time. A field that burns in the late afternoon or evening, and is out within an hour or two, is never seen alight. In north-western India, a geostationary satellite shows the peak of burning moving from about 13:00–14:00 to 16:00–17:00 since 2022 (<a href="https://doi.org/10.3390/rs18101506" target="_blank" rel="noopener">Jethva 2026</a>).` + day24],
     ["Days", "a scar stays visible",
       "Flames last minutes to hours; the blackened field stays dark until it is ploughed. Sentinel-2 passes every few days, and any clear image catches the scar, whatever the hour the field burned."],
     [pct(smallMissed), "of small burns had no fire point",
