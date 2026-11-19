@@ -23,27 +23,27 @@ season,district,smoke,series,how,days,spearman_r,p_value
 2025,Sheikhupura,co,burned_cropland_ha,plain,70,0.3538,0.0027
 2025,Sheikhupura,co,burned_cropland_ha,against the trend,70,0.1438,0.2349
 2025,Sheikhupura,co,burned_cropland_ha,smoke next day,70,0.2986,0.012
-2026,Nankana Sahib,aerosol_index,fire_points,plain,45,-0.0638,0.6774
-2026,Nankana Sahib,aerosol_index,fire_points,against the trend,45,-0.2554,0.0904
-2026,Nankana Sahib,aerosol_index,fire_points,smoke next day,44,0.0874,0.5727
-2026,Nankana Sahib,aerosol_index,burned_cropland_ha,plain,45,-0.0399,0.7948
-2026,Nankana Sahib,aerosol_index,burned_cropland_ha,against the trend,45,0.0868,0.5708
-2026,Nankana Sahib,aerosol_index,burned_cropland_ha,smoke next day,44,0.0721,0.6421
-2026,Nankana Sahib,co,fire_points,plain,39,0.5653,0.0002
-2026,Nankana Sahib,co,fire_points,against the trend,39,-0.1271,0.4407
-2026,Nankana Sahib,co,fire_points,smoke next day,38,0.5828,0.0001
-2026,Nankana Sahib,co,burned_cropland_ha,plain,39,0.5158,0.0008
-2026,Nankana Sahib,co,burned_cropland_ha,against the trend,39,-0.0057,0.9727
-2026,Nankana Sahib,co,burned_cropland_ha,smoke next day,38,0.5134,0.001
-2026,Sheikhupura,aerosol_index,fire_points,plain,45,0.0551,0.7193
-2026,Sheikhupura,aerosol_index,fire_points,against the trend,45,-0.0461,0.7635
-2026,Sheikhupura,aerosol_index,fire_points,smoke next day,44,0.0145,0.9258
-2026,Sheikhupura,aerosol_index,burned_cropland_ha,plain,45,-0.037,0.8091
-2026,Sheikhupura,aerosol_index,burned_cropland_ha,against the trend,45,0.0835,0.5854
-2026,Sheikhupura,aerosol_index,burned_cropland_ha,smoke next day,44,0.0262,0.8659
-2026,Sheikhupura,co,fire_points,plain,40,0.3534,0.0253
-2026,Sheikhupura,co,fire_points,against the trend,40,0.0515,0.7523
-2026,Sheikhupura,co,fire_points,smoke next day,39,0.4221,0.0074
-2026,Sheikhupura,co,burned_cropland_ha,plain,40,0.2387,0.1379
-2026,Sheikhupura,co,burned_cropland_ha,against the trend,40,-0.2214,0.1698
-2026,Sheikhupura,co,burned_cropland_ha,smoke next day,39,0.1019,0.5371
+2026,Nankana Sahib,aerosol_index,fire_points,plain,47,-0.0831,0.5785
+2026,Nankana Sahib,aerosol_index,fire_points,against the trend,47,-0.1978,0.1827
+2026,Nankana Sahib,aerosol_index,fire_points,smoke next day,46,0.0757,0.6172
+2026,Nankana Sahib,aerosol_index,burned_cropland_ha,plain,47,-0.0127,0.9322
+2026,Nankana Sahib,aerosol_index,burned_cropland_ha,against the trend,47,0.1514,0.3096
+2026,Nankana Sahib,aerosol_index,burned_cropland_ha,smoke next day,46,0.0793,0.6004
+2026,Nankana Sahib,co,fire_points,plain,41,0.5635,0.0001
+2026,Nankana Sahib,co,fire_points,against the trend,41,-0.0605,0.7073
+2026,Nankana Sahib,co,fire_points,smoke next day,40,0.5873,0.0001
+2026,Nankana Sahib,co,burned_cropland_ha,plain,41,0.5334,0.0003
+2026,Nankana Sahib,co,burned_cropland_ha,against the trend,41,0.0825,0.6079
+2026,Nankana Sahib,co,burned_cropland_ha,smoke next day,40,0.5194,0.0006
+2026,Sheikhupura,aerosol_index,fire_points,plain,47,0.0442,0.7678
+2026,Sheikhupura,aerosol_index,fire_points,against the trend,47,-0.0151,0.9197
+2026,Sheikhupura,aerosol_index,fire_points,smoke next day,46,0.0285,0.8509
+2026,Sheikhupura,aerosol_index,burned_cropland_ha,plain,47,0.0656,0.6614
+2026,Sheikhupura,aerosol_index,burned_cropland_ha,against the trend,47,0.179,0.2286
+2026,Sheikhupura,aerosol_index,burned_cropland_ha,smoke next day,46,0.0947,0.5314
+2026,Sheikhupura,co,fire_points,plain,42,0.3585,0.0197
+2026,Sheikhupura,co,fire_points,against the trend,42,0.06,0.7057
+2026,Sheikhupura,co,fire_points,smoke next day,41,0.4045,0.0087
+2026,Sheikhupura,co,burned_cropland_ha,plain,42,0.3179,0.0402
+2026,Sheikhupura,co,burned_cropland_ha,against the trend,42,-0.1521,0.3364
+2026,Sheikhupura,co,burned_cropland_ha,smoke next day,41,0.1273,0.4277
